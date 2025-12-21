@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050505">
+    <title>AETHER OS | PSX REFINED</title>
+    
+    <!-- Fuentes y Iconos -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        :root {
+            --bg-deep: #050505;
+            --accent: #ff0055;
+            --accent-glow: rgba(255, 0, 85, 0.6);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #888888;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            user-select: none;
+        }
+
+        /* --- BACKGROUND ANIMADO --- */
+        .ambient-mesh {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(255, 0, 85, 0.08), transparent 25%);
+            z-index: -1;
+            transition: all 1s ease;
+        }
+
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJibGFjayIvPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InRyYW5zcGFyZW50IiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjAzIi8+PGZpbHRlciBpZD0ibm9pc2UiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjY1IiBudW1PY3RhdmVzPSIzIiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PC9zdmc+');
+            pointer-events: none;
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        /* --- UI LAYER --- */
+        #ui-layer {
+            transition: opacity 0.5s, transform 0.5s;
+        }
+
+        /* HEADER */
+        .top-bar {
+            position: absolute; top: 0; width: 100%;
+            padding: 1.5rem 2rem;
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 10;
+        }
+        @media (max-width: 640px) {
+            .top-bar { padding: 1rem; }
+            .user-pill span { display: none; }
+        }
+
+        .user-pill {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(255,255,255,0.05);
+            padding: 6px 6px 6px 12px;
+            border-radius: 50px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+        .avatar {
+            width: 28px; height: 28px;
+            background: linear-gradient(135deg, #ff0055, #ff5500);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* CAROUSEL */
+        .dashboard {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            padding: 0 5vw;
+            display: flex; align-items: center; gap: 2rem;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+        }
+        .dashboard::-webkit-scrollbar { display: none; }
+        
+        .dashboard::after { content: ''; min-width: 5vw; height: 1px; }
+
+        /* CARDS */
+        .card {
+            scroll-snap-align: center;
+            display: inline-flex; flex-direction: column;
+            width: 300px; height: 420px;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            flex-shrink: 0;
+            justify-content: space-between;
+        }
+
+        .card.hero {
+            width: 500px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+        }
+
+        @media (max-width: 768px) {
+            .card.hero { width: 85vw; height: 60vh; }
+            .card { width: 75vw; height: 50vh; }
+        }
+
+        .card:hover, .card:focus-within {
+            transform: translateY(-5px);
+            border-color: rgba(255,255,255,0.3);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+        }
+
+        .card.active-rom {
+            border-color: var(--accent);
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .card-icon-lg {
+            font-size: 5rem;
+            color: rgba(255,255,255,0.05);
+            margin-bottom: auto;
+            transition: 0.3s;
+        }
+        .card:hover .card-icon-lg {
+            color: rgba(255,255,255,0.1);
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        /* INPUTS & BUTTONS */
+        .file-trigger {
+            position: absolute; top: 0; left: 0; width: 100%; height: 70%;
+            cursor: pointer; z-index: 5;
+        }
+        .hidden-input { display: none; }
+
+        .btn-main {
+            width: 100%;
+            background: var(--text-main);
+            color: black;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: not-allowed;
+            opacity: 0.5;
+            transition: all 0.3s;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+        
+        .btn-main.ready {
+            cursor: pointer; opacity: 1;
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        .btn-main.ready:active { transform: scale(0.96); }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+
+        /* SETTINGS MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 999;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none;
+            transition: 0.3s;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+        .modal-box {
+            width: 90%; max-width: 400px;
+            background: #111;
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            transform: scale(0.9);
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.open .modal-box { transform: scale(1); }
+
+        /* TOGGLE SWITCHES */
+        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .switch {
+            position: relative; display: inline-block; width: 50px; height: 26px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 18px; width: 18px; left: 4px; bottom: 4px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* EMULATOR LAYER */
+        #emu-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 100;
+            display: none; opacity: 0; transition: opacity 1s;
+        }
+        #game { width: 100%; height: 100%; }
+
+        /* CRT EFFECT OVERLAY (CSS BASED) */
+        .scanlines::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 101;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* ORIENTATION WARNING */
+        #rotate-warning {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; color: white;
+            z-index: 99999;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        @media screen and (orientation: portrait) and (max-width: 768px) {
+            #rotate-warning { display: flex; }
+        }
+
+        /* BOOT ANIMATION */
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            animation: fadeOutBoot 0.6s ease-in-out 2s forwards;
+        }
+        @keyframes fadeOutBoot { to { opacity: 0; visibility: hidden; } }
+
+    </style>
+</head>
+<body>
+
+    <!-- BOOT SCREEN -->
+    <div id="boot-screen">
+        <div class="text-4xl font-black tracking-tighter animate-pulse">
+            AETHER<span style="color:var(--accent)">.OS</span>
+        </div>
+    </div>
+
+    <!-- MOBILE ORIENTATION WARNING -->
+    <div id="rotate-warning">
+        <i class="fas fa-mobile-screen-button fa-rotate-270 text-4xl mb-4 text-pink-500"></i>
+        <h2 class="text-xl font-bold mb-2">Girar Dispositivo</h2>
+        <p class="text-gray-400 text-sm px-8">Para una mejor experiencia PSX, usa el modo horizontal.</p>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-box">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold"><i class="fas fa-sliders-h mr-2"></i>Ajustes</h2>
+                <button onclick="toggleSettings()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+            </div>
+
+            <div class="toggle-row">
+                <div>
+                    <div class="font-bold">Efecto CRT (CSS)</div>
+                    <div class="text-xs text-gray-500">Scanlines sobre el canvas</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="setting-crt">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="mt-8 p-3 bg-gray-900 rounded-lg border border-gray-800">
+                <div class="text-xs text-gray-400 font-mono">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Asegúrate de ejecutar esto desde un Servidor Local (http) y no desde un archivo (file://).
+                </div>
+            </div>
+            
+            <button onclick="toggleSettings()" class="w-full mt-6 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200">Guardar & Cerrar</button>
+        </div>
+    </div>
+
+    <div class="ambient-mesh"></div>
+    <div class="noise-overlay"></div>
+
+    <!-- MAIN UI -->
+    <div id="ui-layer">
+        
+        <header class="top-bar">
+            <div class="user-pill">
+                <div class="avatar"></div>
+                <span class="text-sm font-medium tracking-wide">User_01</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleSettings()" class="btn-secondary rounded-full w-10 h-10 flex items-center justify-center p-0">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <div class="text-gray-400 font-mono text-sm hidden sm:block" id="clock">12:00</div>
+            </div>
+        </header>
+
+        <main class="dashboard">
+            
+            <!-- CARD 1: ROM LOADER -->
+            <div class="card hero group" id="card-rom">
+                <!-- Click area para subir archivo -->
+                <label class="file-trigger" for="rom-input" title="Click para cargar ROM"></label>
+                <input type="file" id="rom-input" class="hidden-input" accept=".iso,.bin,.img,.cue,.pbp,.chd">
+                
+                <i class="fas fa-compact-disc card-icon-lg absolute top-8 right-8"></i>
+
+                <div class="mt-auto relative z-10">
+                    <div class="text-xs font-bold uppercase tracking-widest text-pink-500 mb-1">Unidad Óptica</div>
+                    <h2 id="game-title" class="text-3xl font-black leading-none mb-2 truncate">Sin Disco</h2>
+                    <p id="game-desc" class="text-sm text-gray-400 mb-6 line-clamp-2">
+                        Toca aquí para seleccionar un archivo de juego (.iso, .bin, .pbp).
+                    </p>
+                    
+                    <button id="launch-btn" class="btn-main">
+                        <i class="fas fa-power-off"></i> Iniciar Sistema
+                    </button>
+                </div>
+            </div>
+
+            <!-- CARD 2: BIOS -->
+            <div class="card">
+                <label class="file-trigger" for="bios-input"></label>
+                <input type="file" id="bios-input" class="hidden-input" accept=".bin">
+                
+                <i class="fas fa-microchip card-icon-lg"></i>
+                <div>
+                    <h2 class="text-xl font-bold">BIOS</h2>
+                    <p class="text-sm text-gray-400 mt-2" id="bios-status">
+                        HLE (Emulación interna).<br>No es obligatorio cargar BIOS.
+                    </p>
+                </div>
+            </div>
+
+            <!-- CARD 3: INFO -->
+            <div class="card bg-gradient-to-br from-gray-900 to-black">
+                <i class="fas fa-gamepad card-icon-lg"></i>
+                <div>
+                    <h2 class="text-xl font-bold">Instrucciones</h2>
+                    <ul class="text-sm text-gray-400 mt-2 space-y-1">
+                        <li>• Sube tu .iso / .bin</li>
+                        <li>• Clic en JUGAR</li>
+                        <li>• Espera que descargue el Core</li>
+                    </ul>
+                </div>
+            </div>
+
+        </main>
+
+        <footer class="fixed bottom-0 w-full p-6 text-center text-xs text-gray-600 font-mono uppercase tracking-widest hidden sm:block">
+            Aether OS v2.1 // EmulatorJS Integration
+        </footer>
+
+    </div>
+
+    <!-- EMULATOR CONTAINER -->
+    <div id="emu-layer">
+        <!-- Botón flotante para salir -->
+        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 z-50 p-2">
+            <button onclick="closeGame()" class="bg-gray-900/80 text-white px-4 py-1 rounded-b-xl border border-t-0 border-gray-700 text-xs backdrop-blur-md cursor-pointer hover:bg-pink-600">
+                ▼ SALIR / MENU
+            </button>
+        </div>
+        <!-- Contenedor del Canvas de EmulatorJS -->
+        <div id="game"></div>
+    </div>
+
+    <script>
+        // --- RELOJ ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }, 1000);
+
+        // --- ESTADO ---
+        const state = {
+            rom: null,
+            bios: null,
+            settings: {
+                crt: false
+            }
+        };
+
+        const els = {
+            ui: document.getElementById('ui-layer'),
+            emu: document.getElementById('emu-layer'),
+            cardRom: document.getElementById('card-rom'),
+            title: document.getElementById('game-title'),
+            desc: document.getElementById('game-desc'),
+            btn: document.getElementById('launch-btn'),
+            modal: document.getElementById('settings-modal'),
+            gameDiv: document.getElementById('game')
+        };
+
+        // --- MANEJO DE ARCHIVOS ---
+        document.getElementById('rom-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            state.rom = file;
+            els.title.innerText = file.name.replace(/\.[^/.]+$/, "");
+            els.desc.innerText = `${(file.size / (1024*1024)).toFixed(1)} MB • Listo para montar`;
+            els.desc.style.color = "#4ade80";
+            
+            els.cardRom.classList.add('active-rom');
+            els.btn.classList.add('ready');
+            els.btn.innerHTML = '<i class="fas fa-play"></i> JUGAR AHORA';
+        });
+
+        document.getElementById('bios-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            state.bios = file;
+            document.getElementById('bios-status').innerHTML = `<span class="text-green-400">BIOS Seleccionada: ${file.name}</span>`;
+        });
+
+        // --- LANZAMIENTO ---
+        els.btn.addEventListener('click', (e) => {
+            if (!state.rom) return;
+            // Vibración en móvil al pulsar play
+            if(navigator.vibrate) navigator.vibrate(50);
+            
+            startGame();
+        });
+
+        function startGame() {
+            // 1. Transición UI
+            els.ui.style.opacity = '0';
+            els.ui.style.transform = 'scale(1.1)'; 
+            
+            setTimeout(() => {
+                els.ui.style.display = 'none';
+                els.emu.style.display = 'block';
+                
+                // Aplicar filtros visuales (CSS Overlay)
+                if(state.settings.crt) {
+                    els.emu.classList.add('scanlines');
+                } else {
+                    els.emu.classList.remove('scanlines');
+                }
+
+                setTimeout(() => {
+                    els.emu.style.opacity = '1';
+                    // 2. Iniciar el motor de emulación
+                    initEmulator();
+                }, 100);
+            }, 500);
+        }
+
+        // --- FUNCIÓN QUE FALTABA: INTEGRACIÓN EMULATORJS ---
+        function initEmulator() {
+            console.log("Iniciando EmulatorJS...");
+            
+            // Convertir el archivo local a URL Blob para que el navegador pueda leerlo
+            const romUrl = URL.createObjectURL(state.rom);
+
+            // Configuración Global de EmulatorJS
+            window.EJS_player = '#game';
+            window.EJS_core = 'psx'; // Core de PlayStation
+            window.EJS_gameUrl = romUrl; 
+            window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/'; // Usamos CDN para los archivos del core
+            
+            // Configuración opcional
+            window.EJS_startOnLoaded = true;
+            window.EJS_biosUrl = state.bios ? URL.createObjectURL(state.bios) : '';
+
+            // Cargar dinámicamente el script del cargador
+            const script = document.createElement('script');
+            script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+            script.async = true;
+            document.body.appendChild(script);
+        }
+
+        function closeGame() {
+            if(confirm("¿Salir al dashboard? Perderás el progreso no guardado.")) {
+                location.reload();
+            }
+        }
+
+        // --- SETTINGS LOGIC (Arreglada) ---
+        function toggleSettings() {
+            const isOpen = els.modal.classList.contains('open');
+            if(isOpen) {
+                // Guardar cambios al cerrar
+                state.settings.crt = document.getElementById('setting-crt').checked;
+                els.modal.classList.remove('open');
+            } else {
+                // Abrir
+                document.getElementById('setting-crt').checked = state.settings.crt;
+                els.modal.classList.add('open');
+            }
+        }
+    </script>
+</body>
+</html>
