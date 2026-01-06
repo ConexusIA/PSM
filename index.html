@@ -2,276 +2,258 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#050505">
-    <title>AETHER OS | PSX REFINED</title>
-    
-    <!-- Fuentes y Iconos -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gemini Live Mobile</title>
     <style>
         :root {
-            --bg-deep: #050505;
-            --accent: #ff0055;
-            --accent-glow: rgba(255, 0, 85, 0.6);
-            --card-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #ffffff;
-            --text-muted: #888888;
+            --bg: #0b0e14;
+            --card: #1e2128;
+            --accent: #4e9cff;
+            --text: #e2e8f0;
+            --input-bg: #13161c;
         }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            background-color: var(--bg-deep);
-            color: var(--text-main);
-            font-family: 'Outfit', sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
             margin: 0;
-            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        /* --- BACKGROUND ANIMADO --- */
-        .ambient-mesh {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: 
-                radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(255, 0, 85, 0.08), transparent 25%);
-            z-index: -1;
-            transition: all 1s ease;
-        }
-
-        .noise-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJibGFjayIvPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InRyYW5zcGFyZW50IiBmaWx0ZXI9InVybCgjbm9pc2UpIiBvcGFjaXR5PSIwLjAzIi8+PGZpbHRlciBpZD0ibm9pc2UiPjxmZVR1cmJ1bGVuY2UgdHlwZT0iZnJhY3RhbE5vaXNlIiBiYXNlRnJlcXVlbmN5PSIwLjY1IiBudW1PY3RhdmVzPSIzIiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PC9zdmc+');
-            pointer-events: none;
-            opacity: 0.3;
-            z-index: 0;
-        }
-
-        /* --- UI LAYER --- */
-        #ui-layer {
-            transition: opacity 0.5s, transform 0.5s;
-        }
-
-        /* HEADER */
-        .top-bar {
-            position: absolute; top: 0; width: 100%;
-            padding: 1.5rem 2rem;
-            display: flex; justify-content: space-between; align-items: center;
-            z-index: 10;
-        }
-        @media (max-width: 640px) {
-            .top-bar { padding: 1rem; }
-            .user-pill span { display: none; }
-        }
-
-        .user-pill {
-            display: flex; align-items: center; gap: 12px;
-            background: rgba(255,255,255,0.05);
-            padding: 6px 6px 6px 12px;
-            border-radius: 50px;
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(10px);
-        }
-        .avatar {
-            width: 28px; height: 28px;
-            background: linear-gradient(135deg, #ff0055, #ff5500);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--accent-glow);
-        }
-
-        /* CAROUSEL */
-        .dashboard {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            padding: 0 5vw;
-            display: flex; align-items: center; gap: 2rem;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            scrollbar-width: none;
-        }
-        .dashboard::-webkit-scrollbar { display: none; }
-        
-        .dashboard::after { content: ''; min-width: 5vw; height: 1px; }
-
-        /* CARDS */
-        .card {
-            scroll-snap-align: center;
-            display: inline-flex; flex-direction: column;
-            width: 300px; height: 420px;
-            background: var(--card-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 24px;
-            position: relative;
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            flex-shrink: 0;
-            justify-content: space-between;
-        }
-
-        .card.hero {
-            width: 500px;
-            background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
-        }
-
-        @media (max-width: 768px) {
-            .card.hero { width: 85vw; height: 60vh; }
-            .card { width: 75vw; height: 50vh; }
-        }
-
-        .card:hover, .card:focus-within {
-            transform: translateY(-5px);
-            border-color: rgba(255,255,255,0.3);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
-        }
-
-        .card.active-rom {
-            border-color: var(--accent);
-            box-shadow: 0 0 40px var(--accent-glow);
-        }
-
-        .card-icon-lg {
-            font-size: 5rem;
-            color: rgba(255,255,255,0.05);
-            margin-bottom: auto;
-            transition: 0.3s;
-        }
-        .card:hover .card-icon-lg {
-            color: rgba(255,255,255,0.1);
-            transform: scale(1.1) rotate(-5deg);
-        }
-
-        /* INPUTS & BUTTONS */
-        .file-trigger {
-            position: absolute; top: 0; left: 0; width: 100%; height: 70%;
-            cursor: pointer; z-index: 5;
-        }
-        .hidden-input { display: none; }
-
-        .btn-main {
+        .container {
             width: 100%;
-            background: var(--text-main);
-            color: black;
-            border: none;
+            max-width: 500px;
+            background: var(--card);
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid #30363d;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(90deg, #4e9cff, #91beff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+            color: #8b949e;
+        }
+
+        input {
+            width: 100%;
             padding: 14px;
             border-radius: 12px;
-            font-weight: 800;
+            border: 1px solid #30363d;
+            background: var(--input-bg);
+            color: white;
             font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: not-allowed;
-            opacity: 0.5;
-            transition: all 0.3s;
-            display: flex; justify-content: center; align-items: center; gap: 10px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
         }
-        
-        .btn-main.ready {
-            cursor: pointer; opacity: 1;
+
+        input:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: none;
             background: var(--accent);
-            color: white;
-            box-shadow: 0 4px 20px var(--accent-glow);
-        }
-        .btn-main.ready:active { transform: scale(0.96); }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 500;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.3s;
-        }
-        .btn-secondary:hover { background: rgba(255,255,255,0.2); }
-
-        /* SETTINGS MODAL */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(10px);
-            z-index: 999;
-            display: flex; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none;
-            transition: 0.3s;
-        }
-        .modal-overlay.open { opacity: 1; pointer-events: all; }
-
-        .modal-box {
-            width: 90%; max-width: 400px;
-            background: #111;
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            padding: 2rem;
-            transform: scale(0.9);
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .modal-overlay.open .modal-box { transform: scale(1); }
-
-        /* TOGGLE SWITCHES */
-        .toggle-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .switch {
-            position: relative; display: inline-block; width: 50px; height: 26px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute; cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #333; transition: .4s; border-radius: 34px;
-        }
-        .slider:before {
-            position: absolute; content: "";
-            height: 18px; width: 18px; left: 4px; bottom: 4px;
-            background-color: white; transition: .4s; border-radius: 50%;
-        }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(24px); }
-
-        /* EMULATOR LAYER */
-        #emu-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: black; z-index: 100;
-            display: none; opacity: 0; transition: opacity 1s;
-        }
-        #game { width: 100%; height: 100%; }
-
-        /* CRT EFFECT OVERLAY (CSS BASED) */
-        .scanlines::after {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 101;
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 10px;
         }
 
-        /* ORIENTATION WARNING */
-        #rotate-warning {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; color: white;
-            z-index: 99999;
-            flex-direction: column; justify-content: center; align-items: center; text-align: center;
-        }
-        @media screen and (orientation: portrait) and (max-width: 768px) {
-            #rotate-warning { display: flex; }
+        button:active {
+            transform: scale(0.98);
         }
 
-        /* BOOT ANIMATION */
-        #boot-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 9999;
-            display: flex; justify-content: center; align-items: center;
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            text-align: center;
+            color: #8b949e;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .pulse {
+            width: 10px;
+            height: 10px;
+            background: #4e9cff;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 0.2; }
+            50% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gemini Live 2.5</h1>
+    
+    <div class="field">
+        <label>GOOGLE AI STUDIO API KEY</label>
+        <input type="password" id="apiKey" placeholder="Pega tu API key aquí...">
+    </div>
+
+    <div class="field">
+        <label>TU MENSAJE</label>
+        <input type="text" id="userInput" placeholder="Pregunta algo...">
+    </div>
+
+    <button id="sendBtn">Escuchar Respuesta</button>
+
+    <div id="status">Estado: Listo</div>
+</div>
+
+<script>
+    const apiKeyInput = document.getElementById('apiKey');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const statusDiv = document.getElementById('status');
+
+    let audioContext;
+    let nextStartTime = 0;
+
+    // Configuración de Audio para reproducción fluida
+    function setupAudio() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+            nextStartTime = audioContext.currentTime;
+        }
+    }
+
+    // Decodifica PCM Base64 a AudioBuffer
+    function playAudioChunk(base64Data) {
+        const binary = atob(base64Data);
+        const buffer = new Int16Array(binary.length / 2);
+        for (let i = 0; i < binary.length; i += 2) {
+            buffer[i / 2] = (binary.charCodeAt(i + 1) << 8) | binary.charCodeAt(i);
+        }
+
+        const float32 = new Float32Array(buffer.length);
+        for (let i = 0; i < buffer.length; i++) {
+            float32[i] = buffer[i] / 32768.0;
+        }
+
+        const audioBuf = audioContext.createBuffer(1, float32.length, 24000);
+        audioBuf.copyToChannel(float32, 0);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuf;
+        source.connect(audioContext.destination);
+
+        const startTime = Math.max(nextStartTime, audioContext.currentTime);
+        source.start(startTime);
+        nextStartTime = startTime + audioBuf.duration;
+    }
+
+    async function startConversation() {
+        const key = apiKeyInput.value.trim();
+        const text = userInput.value.trim();
+
+        if (!key || !text) {
+            alert("Por favor rellena ambos campos");
+            return;
+        }
+
+        setupAudio();
+        sendBtn.disabled = true;
+        statusDiv.innerHTML = '<span class="pulse"></span> Conectando...';
+
+        const URL = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${key}`;
+        
+        const socket = new WebSocket(URL);
+
+        socket.onopen = () => {
+            statusDiv.innerText = "Enviando solicitud...";
+            
+            // 1. Configuración del modelo
+            socket.send(JSON.stringify({
+                setup: { model: "models/gemini-live-2.5-flash-native-audio" }
+            }));
+
+            // 2. Envío del prompt
+            socket.send(JSON.stringify({
+                client_content: {
+                    turns: [{ role: "user", parts: [{ text: text }] }],
+                    turn_complete: true
+                }
+            }));
+        };
+
+        socket.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.serverContent?.modelTurn?.parts) {
+                msg.serverContent.modelTurn.parts.forEach(part => {
+                    if (part.inlineData?.mimeType.includes("audio")) {
+                        statusDiv.innerText = "Gemini está hablando...";
+                        playAudioChunk(part.inlineData.data);
+                    }
+                });
+            }
+
+            if (msg.serverContent?.turnComplete) {
+                statusDiv.innerText = "Respuesta finalizada.";
+                sendBtn.disabled = false;
+            }
+        };
+
+        socket.onerror = (e) => {
+            statusDiv.innerText = "Error de conexión";
+            sendBtn.disabled = false;
+        };
+
+        socket.onclose = () => {
+            sendBtn.disabled = false;
+        };
+    }
+
+    sendBtn.addEventListener('click', startConversation);
+</script>
+
+</body>
+</html>
+     display: flex; justify-content: center; align-items: center;
             animation: fadeOutBoot 0.6s ease-in-out 2s forwards;
         }
         @keyframes fadeOutBoot { to { opacity: 0; visibility: hidden; } }
