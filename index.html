@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini 2.5 Live Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white p-10">
+
+    <div class="max-w-lg mx-auto bg-gray-900 p-6 rounded-lg border border-gray-700">
+        <h1 class="text-xl font-bold mb-4">Prueba Real-time: Gemini 2.5 Native Audio</h1>
+        
+        <input type="password" id="apiKey" placeholder="Pega tu API Key de Google" 
+            class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded">
+
+        <button id="toggleBtn" class="w-full bg-blue-600 py-3 rounded font-bold hover:bg-blue-500">
+            CONECTAR Y HABLAR
+        </button>
+
+        <div id="status" class="mt-4 text-center text-gray-400 text-sm italic">
+            Estado: Desconectado
+        </div>
+    </div>
+
+    <script>
+        let audioContext;
+        let socket;
+        let stream;
+        const MODEL = "gemini-2.5-flash-native-audio-preview-12-2025";
+        
+        const btn = document.getElementById('toggleBtn');
+        const status = document.getElementById('status');
+        const apiKeyInput = document.getElementById('apiKey');
+
+        async function start() {
+            const key = apiKeyInput.value;
+            if (!key) return alert("Falta la API Key");
+
+            // 1. Configurar Audio Context (Equivalente a PyAudio)
+            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            
+            // 2. Establecer WebSocket (Conexión Live)
+            const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BiDiSession?key=${key}`;
+            socket = new WebSocket(url);
+
+            socket.onopen = () => {
+                status.textContent = "Conectado. Transmitiendo...";
+                // Enviar Configuración inicial igual a tu objeto CONFIG
+                const setup = {
+                    setup: {
+                        model: `models/${MODEL}`,
+                        generation_config: {
+                            response_modalities: ["AUDIO"]
+                        }
+                    }
+                };
+                socket.send(JSON.stringify(setup));
+                captureMic();
+            };
+
+            socket.onmessage = async (event) => {
+                const response = JSON.parse(event.data);
+                
+                // Procesar respuesta de audio (como tu receive_audio)
+                const audioData = response.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+                if (audioData) {
+                    playPcm(audioData);
+                }
+            };
+
+            socket.onclose = () => {
+                status.textContent = "Conexión cerrada.";
+                btn.textContent = "CONECTAR Y HABLAR";
+            };
+        }
+
+        async function captureMic() {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = audioContext.createMediaStreamSource(stream);
+            const processor = audioContext.createScriptProcessor(1024, 1, 1);
+
+            source.connect(processor);
+            processor.connect(audioContext.destination);
+
+            processor.onaudioprocess = (e) => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    const input = e.inputBuffer.getChannelData(0);
+                    // Convertir a Int16 (PCM) como en tu config de PyAudio
+                    const pcm = new Int16Array(input.length);
+                    for (let i = 0; i < input.length; i++) {
+                        pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7FFF;
+                    }
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm.buffer)));
+                    
+                    socket.send(JSON.stringify({
+                        realtime_input: {
+                            media_chunks: [{ data: base64, mime_type: "audio/pcm" }]
+                        }
+                    }));
+                }
+            };
+        }
+
+        function playPcm(base64) {
+            // Decodificar y reproducir a 24000Hz (como tu RECEIVE_SAMPLE_RATE)
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const pcm16 = new Int16Array(bytes.buffer);
+            const float32 = new Float32Array(pcm16.length);
+            for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768.0;
+
+            const buffer = audioContext.createBuffer(1, float32.length, 24000);
+            buffer.getChannelData(0).set(float32);
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start();
+        }
+
+        btn.onclick = () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            } else {
+                start();
+                btn.textContent = "DETENER";
+            }
+        };
+    </script>
+</body>
+  </html>
+  
