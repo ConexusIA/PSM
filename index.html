@@ -2,70 +2,153 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gemini 2.5 Live Test</title>
+    <title>Gemini 2.5 Live Debug</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-black text-white p-10">
-
-    <div class="max-w-lg mx-auto bg-gray-900 p-6 rounded-lg border border-gray-700">
-        <h1 class="text-xl font-bold mb-4">Prueba Real-time: Gemini 2.5 Native Audio</h1>
+<body class="bg-zinc-950 text-zinc-200 p-6">
+    <div class="max-w-2xl mx-auto border border-zinc-800 rounded-lg p-6 bg-zinc-900 shadow-xl">
+        <h1 class="text-xl font-mono text-blue-400 mb-4">> Gemini 2.5 Native Audio_</h1>
         
-        <input type="password" id="apiKey" placeholder="Pega tu API Key de Google" 
-            class="w-full p-2 mb-4 bg-gray-800 border border-gray-600 rounded">
+        <input type="password" id="apiKey" placeholder="Pega tu API Key aquí" 
+            class="w-full p-3 mb-4 bg-black border border-zinc-700 rounded text-green-500 font-mono focus:border-blue-500 outline-none">
 
-        <button id="toggleBtn" class="w-full bg-blue-600 py-3 rounded font-bold hover:bg-blue-500">
-            CONECTAR Y HABLAR
+        <button id="btn" class="w-full bg-blue-700 hover:bg-blue-600 text-white font-bold py-3 rounded-md transition-all">
+            INICIAR SESIÓN
         </button>
 
-        <div id="status" class="mt-4 text-center text-gray-400 text-sm italic">
-            Estado: Desconectado
+        <div id="console" class="mt-6 p-4 bg-black rounded border border-zinc-800 h-64 overflow-y-auto font-mono text-xs text-zinc-400">
+            <div>-- Esperando conexión --</div>
         </div>
     </div>
 
     <script>
-        let audioContext;
-        let socket;
-        let stream;
         const MODEL = "gemini-2.5-flash-native-audio-preview-12-2025";
+        let socket;
+        let audioCtx;
+        let stream;
         
-        const btn = document.getElementById('toggleBtn');
-        const status = document.getElementById('status');
+        const btn = document.getElementById('btn');
+        const consoleLog = document.getElementById('console');
         const apiKeyInput = document.getElementById('apiKey');
+
+        function log(msg, color = "text-zinc-400") {
+            const div = document.createElement('div');
+            div.className = color;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleLog.appendChild(div);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
 
         async function start() {
             const key = apiKeyInput.value;
-            if (!key) return alert("Falta la API Key");
+            if (!key) return log("ERROR: Falta la API Key", "text-red-500");
 
-            // 1. Configurar Audio Context (Equivalente a PyAudio)
-            audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            log("Iniciando audio y conexión...");
             
-            // 2. Establecer WebSocket (Conexión Live)
-            const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BiDiSession?key=${key}`;
-            socket = new WebSocket(url);
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                
+                // URL exacta para Gemini Multimodal Live v1alpha
+                const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BiDiSession?key=${key}`;
+                socket = new WebSocket(url);
 
-            socket.onopen = () => {
-                status.textContent = "Conectado. Transmitiendo...";
-                // Enviar Configuración inicial igual a tu objeto CONFIG
-                const setup = {
-                    setup: {
-                        model: `models/${MODEL}`,
-                        generation_config: {
-                            response_modalities: ["AUDIO"]
+                socket.onopen = () => {
+                    log("WebSocket Abierto. Enviando Setup...", "text-green-500");
+                    
+                    const setup = {
+                        setup: {
+                            model: `models/${MODEL}`,
+                            generation_config: { 
+                                response_modalities: ["AUDIO"] 
+                            }
                         }
+                    };
+                    socket.send(JSON.stringify(setup));
+                    startMic();
+                };
+
+                socket.onmessage = async (event) => {
+                    const data = JSON.parse(event.data);
+                    
+                    // Si el servidor nos dice que ya está listo tras el setup
+                    if (data.setupComplete) {
+                        log("Setup completado. El modelo te escucha.", "text-blue-400");
+                    }
+
+                    // Manejar audio entrante (24000Hz como tu Python)
+                    const base64Audio = data.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+                    if (base64Audio) {
+                        playAudio(base64Audio);
                     }
                 };
-                socket.send(JSON.stringify(setup));
-                captureMic();
-            };
 
-            socket.onmessage = async (event) => {
-                const response = JSON.parse(event.data);
-                
-                // Procesar respuesta de audio (como tu receive_audio)
-                const audioData = response.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                if (audioData) {
-                    playPcm(audioData);
+                socket.onerror = (e) => log("Error en WebSocket: Verifique API Key o cuotas", "text-red-500");
+                socket.onclose = () => {
+                    log("Conexión cerrada.");
+                    btn.textContent = "INICIAR SESIÓN";
+                };
+
+            } catch (err) {
+                log("Error: " + err.message, "text-red-500");
+            }
+        }
+
+        async function startMic() {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const source = audioCtx.createMediaStreamSource(stream);
+            const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+
+            source.connect(processor);
+            processor.connect(audioCtx.destination);
+
+            processor.onaudioprocess = (e) => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    const input = e.inputBuffer.getChannelData(0);
+                    const pcm = new Int16Array(input.length);
+                    for (let i = 0; i < input.length; i++) {
+                        pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7FFF;
+                    }
+                    
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm.buffer)));
+                    socket.send(JSON.stringify({
+                        realtime_input: {
+                            media_chunks: [{ 
+                                data: base64, 
+                                mime_type: "audio/pcm" 
+                            }]
+                        }
+                    }));
                 }
+            };
+        }
+
+        function playAudio(b64) {
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const pcm16 = new Int16Array(bytes.buffer);
+            const float32 = new Float32Array(pcm16.length);
+            for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768.0;
+
+            const buffer = audioCtx.createBuffer(1, float32.length, 24000);
+            buffer.getChannelData(0).set(float32);
+            const node = audioCtx.createBufferSource();
+            node.buffer = buffer;
+            node.connect(audioCtx.destination);
+            node.start();
+        }
+
+        btn.onclick = () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+            } else {
+                start();
+                btn.textContent = "DETENER";
+            }
+        };
+    </script>
+</body>
+</html>
             };
 
             socket.onclose = () => {
