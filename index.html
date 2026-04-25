@@ -2,214 +2,517 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gemini 2.5 Live Debug</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-zinc-950 text-zinc-200 p-6">
-    <div class="max-w-2xl mx-auto border border-zinc-800 rounded-lg p-6 bg-zinc-900 shadow-xl">
-        <h1 class="text-xl font-mono text-blue-400 mb-4">> Gemini 2.5 Native Audio_</h1>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ink-Grid | Distributed Python Engine</title>
+    <!-- PeerJS para WebRTC P2P (Signaling gratuito) -->
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <!-- QRCode.js para fácil conexión -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #070709;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --neon-cyan: #00f3ff;
+            --neon-purple: #b026ff;
+            --text-main: #f0f0f0;
+            --text-muted: #888;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.08), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(176, 38, 255, 0.08), transparent 25%);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px 40px;
+            gap: 20px;
+        }
+
+        /* Paneles */
+        .sidebar { width: 300px; display: flex; flex-direction: column; gap: 20px; }
+        .main-editor { flex: 1; display: flex; flex-direction: column; gap: 20px; }
         
-        <input type="password" id="apiKey" placeholder="Pega tu API Key aquí" 
-            class="w-full p-3 mb-4 bg-black border border-zinc-700 rounded text-green-500 font-mono focus:border-blue-500 outline-none">
+        /* Nodos y Orbes */
+        .nodes-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
 
-        <button id="btn" class="w-full bg-blue-700 hover:bg-blue-600 text-white font-bold py-3 rounded-md transition-all">
-            INICIAR SESIÓN
-        </button>
+        .node-orb {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 243, 255, 0.2);
+            border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
 
-        <div id="console" class="mt-6 p-4 bg-black rounded border border-zinc-800 h-64 overflow-y-auto font-mono text-xs text-zinc-400">
-            <div>-- Esperando conexión --</div>
+        .node-orb.master {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 15px rgba(176, 38, 255, 0.5);
+            background: rgba(176, 38, 255, 0.2);
+        }
+
+        .node-orb.computing {
+            animation: pulse-orb 0.8s infinite alternate;
+        }
+
+        @keyframes pulse-orb {
+            0% { transform: scale(0.95); box-shadow: 0 0 10px var(--neon-cyan); }
+            100% { transform: scale(1.15); box-shadow: 0 0 30px var(--neon-cyan), 0 0 60px var(--neon-cyan); }
+        }
+
+        /* Editor de Código */
+        textarea.code-editor {
+            width: 100%;
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #a9b7c6;
+            font-family: 'Fira Code', monospace;
+            font-size: 15px;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .btn {
+            background: linear-gradient(90deg, rgba(0, 243, 255, 0.2), rgba(176, 38, 255, 0.2));
+            border: 1px solid var(--neon-cyan);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            box-shadow: 0 0 15px var(--neon-cyan);
+            background: linear-gradient(90deg, rgba(0, 243, 255, 0.4), rgba(176, 38, 255, 0.4));
+        }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+
+        /* Consola */
+        .console {
+            height: 150px;
+            overflow-y: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            color: var(--neon-cyan);
+        }
+        
+        .console-log { margin: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 3px; }
+        .console-log.success { color: #00ff88; }
+        .console-log.error { color: #ff3366; }
+
+        #qr-container img { border-radius: 8px; border: 2px solid white; margin-top: 10px; }
+
+        /* Pantalla Modo Nodo (Móvil) */
+        #node-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg-color); z-index: 100;
+            display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .big-orb {
+            width: 150px; height: 150px; border-radius: 50%; border: 4px solid var(--neon-cyan);
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.8);
+            margin-bottom: 30px; animation: pulse-orb 2s infinite alternate;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla Principal (Master PC) -->
+    <header id="master-header">
+        <h1>WolfInk | Ink-Grid</h1>
+        <div style="font-size: 12px; color: var(--text-muted);">P2P Distributed Engine (Zero-Server)</div>
+    </header>
+
+    <div class="container" id="master-container">
+        <!-- Barra lateral de Red -->
+        <div class="sidebar glass-panel">
+            <h3>Nodos Activos</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Conecta otros dispositivos escaneando el QR para aumentar el poder de cómputo local.</p>
+            
+            <div class="nodes-container" id="nodes-ui">
+                <div class="node-orb master" title="Master (This PC)">PC</div>
+            </div>
+
+            <div id="qr-wrapper" style="margin-top: 20px; text-align: center;">
+                <div id="qr-container" style="display:inline-block; padding:10px; background:white; border-radius:10px;"></div>
+                <p style="font-size: 11px; margin-top:10px;">Escanea para unirse como Nodo Worker</p>
+            </div>
+        </div>
+
+        <!-- Editor y Consola -->
+        <div class="main-editor">
+            <div class="glass-panel" style="flex: 1; display: flex; flex-direction: column;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">Script Distribuido (Python)</h3>
+                    <button class="btn" id="run-btn" disabled>Ejecutar en Red (Cargando Motor...)</button>
+                </div>
+                <!-- Código Pre-Cargado: Aproximación de Pi vía Método Monte Carlo -->
+                <textarea class="code-editor" id="python-code" spellcheck="false">
+# Ink-Grid | Algoritmo Distribuido: Cálculo de PI (Monte Carlo)
+# La red dividirá las 'iterations' entre los nodos conectados automáticamente.
+
+import random
+
+def compute_pi_chunk(iters):
+    inside_circle = 0
+    for _ in range(iters):
+        x = random.random()
+        y = random.random()
+        if x*x + y*y <= 1.0:
+            inside_circle += 1
+    return inside_circle
+
+# 'payload' es inyectado por WebRTC desde el nodo Master
+result = compute_pi_chunk(payload['iterations'])
+result # El último valor es retornado a la red
+</textarea>
+            </div>
+
+            <div class="glass-panel console" id="console-output">
+                <div class="console-log">[Sistema] Inicializando entorno WebRTC y Pyodide Engine...</div>
+            </div>
         </div>
     </div>
 
+    <!-- Pantalla Nodo (Móvil) -->
+    <div id="node-screen">
+        <h2 style="color: var(--neon-cyan); margin-bottom: 10px;">Ink-Grid Worker</h2>
+        <p style="color: var(--text-muted); margin-bottom: 40px;">Procesador donado a la red local.</p>
+        <div class="big-orb" id="mobile-orb"></div>
+        <p id="node-status">Esperando tareas computacionales del Master...</p>
+    </div>
+
     <script>
-        const MODEL = "gemini-2.5-flash-native-audio-preview-12-2025";
-        let socket;
-        let audioCtx;
-        let stream;
-        
-        const btn = document.getElementById('btn');
-        const consoleLog = document.getElementById('console');
-        const apiKeyInput = document.getElementById('apiKey');
+        /* ====================================================================
+           NÚCLEO DE PYODIDE (WEB WORKER EN LÍNEA)
+           Esto evita problemas de CORS y permite ejecución asíncrona sin trabar UI
+           ==================================================================== */
+        const workerCode = `
+            importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js");
+            let pyodideReady = false;
+            let pyodide;
 
-        function log(msg, color = "text-zinc-400") {
-            const div = document.createElement('div');
-            div.className = color;
-            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            consoleLog.appendChild(div);
-            consoleLog.scrollTop = consoleLog.scrollHeight;
-        }
-
-        async function start() {
-            const key = apiKeyInput.value;
-            if (!key) return log("ERROR: Falta la API Key", "text-red-500");
-
-            log("Iniciando audio y conexión...");
-            
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-                
-                // URL exacta para Gemini Multimodal Live v1alpha
-                const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BiDiSession?key=${key}`;
-                socket = new WebSocket(url);
-
-                socket.onopen = () => {
-                    log("WebSocket Abierto. Enviando Setup...", "text-green-500");
-                    
-                    const setup = {
-                        setup: {
-                            model: `models/${MODEL}`,
-                            generation_config: { 
-                                response_modalities: ["AUDIO"] 
-                            }
-                        }
-                    };
-                    socket.send(JSON.stringify(setup));
-                    startMic();
-                };
-
-                socket.onmessage = async (event) => {
-                    const data = JSON.parse(event.data);
-                    
-                    // Si el servidor nos dice que ya está listo tras el setup
-                    if (data.setupComplete) {
-                        log("Setup completado. El modelo te escucha.", "text-blue-400");
-                    }
-
-                    // Manejar audio entrante (24000Hz como tu Python)
-                    const base64Audio = data.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                    if (base64Audio) {
-                        playAudio(base64Audio);
-                    }
-                };
-
-                socket.onerror = (e) => log("Error en WebSocket: Verifique API Key o cuotas", "text-red-500");
-                socket.onclose = () => {
-                    log("Conexión cerrada.");
-                    btn.textContent = "INICIAR SESIÓN";
-                };
-
-            } catch (err) {
-                log("Error: " + err.message, "text-red-500");
+            async function initPyodide() {
+                pyodide = await loadPyodide();
+                pyodideReady = true;
+                postMessage({ type: 'ready' });
             }
-        }
 
-        async function startMic() {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const source = audioCtx.createMediaStreamSource(stream);
-            const processor = audioCtx.createScriptProcessor(2048, 1, 1);
+            initPyodide();
 
-            source.connect(processor);
-            processor.connect(audioCtx.destination);
-
-            processor.onaudioprocess = (e) => {
-                if (socket.readyState === WebSocket.OPEN) {
-                    const input = e.inputBuffer.getChannelData(0);
-                    const pcm = new Int16Array(input.length);
-                    for (let i = 0; i < input.length; i++) {
-                        pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7FFF;
+            onmessage = async (event) => {
+                const { type, code, payload, taskId } = event.data;
+                if (type === 'compute') {
+                    try {
+                        // Pasar variables de JS a Python
+                        self.worker_payload = payload;
+                        await pyodide.runPythonAsync("import js\\npayload = js.worker_payload.to_py()");
+                        
+                        // Ejecutar código del usuario
+                        const result = await pyodide.runPythonAsync(code);
+                        postMessage({ type: 'result', taskId, result });
+                    } catch (error) {
+                        postMessage({ type: 'error', taskId, error: error.message });
                     }
-                    
-                    const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm.buffer)));
-                    socket.send(JSON.stringify({
-                        realtime_input: {
-                            media_chunks: [{ 
-                                data: base64, 
-                                mime_type: "audio/pcm" 
-                            }]
-                        }
-                    }));
                 }
             };
+        `;
+
+        // Crear Worker Dinámico
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        const pythonWorker = new Worker(workerUrl);
+
+        /* ====================================================================
+           LÓGICA DE LA APLICACIÓN Y WEBRTC
+           ==================================================================== */
+        
+        // Elementos UI
+        const consoleOut = document.getElementById('console-output');
+        const runBtn = document.getElementById('run-btn');
+        const nodesUI = document.getElementById('nodes-ui');
+        
+        let isMaster = true;
+        let peer = null;
+        let connections =[]; // Conexiones WebRTC activas a Nodos
+        
+        // Variables de Control Distribuido
+        const TOTAL_ITERATIONS = 10000000; // 10 Millones de cálculos para Pi
+        let activeTasks = 0;
+        let resultsAccumulated = 0;
+
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.className = `console-log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleOut.appendChild(div);
+            consoleOut.scrollTop = consoleOut.scrollHeight;
         }
 
-        function playAudio(b64) {
-            const binary = atob(b64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            const pcm16 = new Int16Array(bytes.buffer);
-            const float32 = new Float32Array(pcm16.length);
-            for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768.0;
+        // Determinar Rol (Master o Nodo) verificando URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const masterId = urlParams.get('node');
 
-            const buffer = audioCtx.createBuffer(1, float32.length, 24000);
-            buffer.getChannelData(0).set(float32);
-            const node = audioCtx.createBufferSource();
-            node.buffer = buffer;
-            node.connect(audioCtx.destination);
-            node.start();
+        if (masterId) {
+            isMaster = false;
+            document.getElementById('master-header').style.display = 'none';
+            document.getElementById('master-container').style.display = 'none';
+            document.getElementById('node-screen').style.display = 'flex';
+            initNode(masterId);
+        } else {
+            initMaster();
         }
 
-        btn.onclick = () => {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.close();
-            } else {
-                start();
-                btn.textContent = "DETENER";
+        // Motor Pyodide Local (Compartido para Master y Nodo)
+        pythonWorker.onmessage = function(e) {
+            const data = e.data;
+            if (data.type === 'ready') {
+                if (isMaster) {
+                    log('Motor Python (Pyodide) cargado en la memoria RAM del PC.', 'success');
+                    runBtn.disabled = false;
+                    runBtn.textContent = 'Ejecutar en Red Local (P2P)';
+                } else {
+                    document.getElementById('node-status').textContent = 'Motor WASM Cargado. Sincronizado.';
+                }
+            } else if (data.type === 'result') {
+                if (isMaster) {
+                    handleWorkerResult(data.result, 'Master (PC)');
+                } else {
+                    // Si soy nodo, enviar resultado al PC principal
+                    document.getElementById('mobile-orb').style.animation = 'pulse-orb 2s infinite alternate';
+                    document.getElementById('node-status').textContent = 'Esperando tareas...';
+                    if (peer && peer.connections[masterId]) {
+                        peer.connections[masterId][0].send({ type: 'result', result: data.result, taskId: data.taskId });
+                    }
+                }
+            } else if (data.type === 'error') {
+                log(`Error en ejecución: ${data.error}`, 'error');
+                if(!isMaster && peer) {
+                    peer.connections[masterId][0].send({ type: 'error', error: data.error });
+                }
             }
         };
+
+        /* --- LÓGICA DEL MASTER (PC) --- */
+        function initMaster() {
+            peer = new Peer(); // Signaling server P2P
+            
+            peer.on('open', (id) => {
+                log(`Handshake ID generado: ${id}`);
+                const connectUrl = window.location.href.split('?')[0] + '?node=' + id;
+                new QRCode(document.getElementById("qr-container"), {
+                    text: connectUrl,
+                    width: 128,
+                    height: 128,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff"
+                });
+            });
+
+            peer.on('connection', (conn) => {
+                log(`Nodo móvil detectado: ${conn.peer.substring(0,6)}... conectando IP.`, 'success');
+                connections.push(conn);
+                
+                // Actualizar UI
+                const orb = document.createElement('div');
+                orb.className = 'node-orb';
+                orb.id = `orb-${conn.peer}`;
+                orb.textContent = `N${connections.length}`;
+                nodesUI.appendChild(orb);
+
+                conn.on('data', (data) => {
+                    if (data.type === 'result') {
+                        document.getElementById(`orb-${conn.peer}`).classList.remove('computing');
+                        handleWorkerResult(data.result, `Nodo N${connections.findIndex(c=>c.peer===conn.peer)+1}`);
+                    } else if (data.type === 'error') {
+                        log(`Error en Nodo: ${data.error}`, 'error');
+                    }
+                });
+
+                conn.on('close', () => {
+                    log(`Nodo desconectado: ${conn.peer.substring(0,6)}`);
+                    document.getElementById(`orb-${conn.peer}`).remove();
+                    connections = connections.filter(c => c.peer !== conn.peer);
+                });
+            });
+
+            // Botón de Ejecución Distribuida
+            runBtn.addEventListener('click', () => {
+                const code = document.getElementById('python-code').value;
+                const totalNodes = connections.length + 1; // Nodos + Master
+                const iterationsPerNode = Math.floor(TOTAL_ITERATIONS / totalNodes);
+                
+                log(`Distribuyendo carga: ${TOTAL_ITERATIONS} iteraciones entre ${totalNodes} dispositivos.`);
+                runBtn.disabled = true;
+                resultsAccumulated = 0;
+                activeTasks = totalNodes;
+
+                // Animar Orbe Local
+                document.querySelector('.node-orb.master').classList.add('computing');
+
+                // 1. Enviar tarea a mi propio Web Worker (Master PC)
+                pythonWorker.postMessage({
+                    type: 'compute',
+                    code: code,
+                    payload: { iterations: iterationsPerNode },
+                    taskId: 'master'
+                });
+
+                // 2. Transmitir binario (vía WebRTC) a todos los móviles sin latencia
+                connections.forEach(conn => {
+                    document.getElementById(`orb-${conn.peer}`).classList.add('computing');
+                    conn.send({
+                        type: 'compute',
+                        code: code,
+                        payload: { iterations: iterationsPerNode },
+                        taskId: conn.peer
+                    });
+                });
+            });
+        }
+
+        // Compilar Resultados y Guardar Archivo
+        async function handleWorkerResult(insideCircleCount, source) {
+            log(`Resultado parcial recibido de ${source}: ${insideCircleCount}`);
+            resultsAccumulated += insideCircleCount;
+            activeTasks--;
+
+            if (activeTasks === 0) {
+                document.querySelector('.node-orb.master').classList.remove('computing');
+                const piAprox = 4 * (resultsAccumulated / TOTAL_ITERATIONS);
+                log(`Cálculo Finalizado. Aprox de PI: ${piAprox}`, 'success');
+                runBtn.disabled = false;
+                
+                // Ejecutar Guardado Directo High-End (File System Access API)
+                saveResultToFile(piAprox);
+            }
+        }
+
+        async function saveResultToFile(piValue) {
+            const content = `=== INK-GRID DISTRIBUTED ENGINE ===\nTotal Nodos: ${connections.length + 1}\nIteraciones Totales: ${TOTAL_ITERATIONS}\nValor PI Calculado: ${piValue}\nTiempo de Ejecución Reducido gracias a Paralelización.`;
+            
+            try {
+                // File System Access API (Sin ventanas de descarga molestas en Chromium)
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'ink_grid_result.txt',
+                    types: [{
+                        description: 'Text Files',
+                        accept: { 'text/plain': ['.txt'] },
+                    }],
+                });
+                const writable = await handle.createWritable();
+                await writable.write(content);
+                await writable.close();
+                log('Archivo guardado localmente mediante Zero-Permission Sync de forma segura.', 'success');
+            } catch (err) {
+                // Fallback para Safari / Firefox o si el usuario cancela
+                const blob = new Blob([content], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "ink_grid_result.txt";
+                a.click();
+                log('Archivo descargado usando método tradicional (Fallback).');
+            }
+        }
+
+        /* --- LÓGICA DEL NODO WORKER (MÓVIL) --- */
+        function initNode(masterPeerId) {
+            peer = new Peer();
+            
+            peer.on('open', (id) => {
+                document.getElementById('node-status').textContent = 'Motor WASM cargando...';
+                
+                // Conectar al Master
+                const conn = peer.connect(masterPeerId);
+                
+                conn.on('open', () => {
+                    document.getElementById('node-status').textContent = 'Sincronizado. Esperando tarea...';
+                    
+                    conn.on('data', (data) => {
+                        if (data.type === 'compute') {
+                            document.getElementById('node-status').textContent = 'Procesando CPU al 100%...';
+                            document.getElementById('mobile-orb').style.animation = 'pulse-orb 0.3s infinite alternate';
+                            
+                            // Pasar el código al Web Worker
+                            pythonWorker.postMessage({
+                                type: 'compute',
+                                code: data.code,
+                                payload: data.payload,
+                                taskId: data.taskId
+                            });
+                        }
+                    });
+                });
+
+                conn.on('close', () => {
+                    document.getElementById('node-status').textContent = 'Conexión con Master perdida.';
+                    document.getElementById('mobile-orb').style.animation = 'none';
+                    document.getElementById('mobile-orb').style.borderColor = 'red';
+                });
+            });
+        }
     </script>
 </body>
 </html>
-            };
-
-            socket.onclose = () => {
-                status.textContent = "Conexión cerrada.";
-                btn.textContent = "CONECTAR Y HABLAR";
-            };
-        }
-
-        async function captureMic() {
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const source = audioContext.createMediaStreamSource(stream);
-            const processor = audioContext.createScriptProcessor(1024, 1, 1);
-
-            source.connect(processor);
-            processor.connect(audioContext.destination);
-
-            processor.onaudioprocess = (e) => {
-                if (socket.readyState === WebSocket.OPEN) {
-                    const input = e.inputBuffer.getChannelData(0);
-                    // Convertir a Int16 (PCM) como en tu config de PyAudio
-                    const pcm = new Int16Array(input.length);
-                    for (let i = 0; i < input.length; i++) {
-                        pcm[i] = Math.max(-1, Math.min(1, input[i])) * 0x7FFF;
-                    }
-                    const base64 = btoa(String.fromCharCode(...new Uint8Array(pcm.buffer)));
-                    
-                    socket.send(JSON.stringify({
-                        realtime_input: {
-                            media_chunks: [{ data: base64, mime_type: "audio/pcm" }]
-                        }
-                    }));
-                }
-            };
-        }
-
-        function playPcm(base64) {
-            // Decodificar y reproducir a 24000Hz (como tu RECEIVE_SAMPLE_RATE)
-            const binary = atob(base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            const pcm16 = new Int16Array(bytes.buffer);
-            const float32 = new Float32Array(pcm16.length);
-            for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768.0;
-
-            const buffer = audioContext.createBuffer(1, float32.length, 24000);
-            buffer.getChannelData(0).set(float32);
-            const source = audioContext.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioContext.destination);
-            source.start();
-        }
-
-        btn.onclick = () => {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                socket.close();
-            } else {
-                start();
-                btn.textContent = "DETENER";
-            }
-        };
-    </script>
-</body>
-  </html>
-  
