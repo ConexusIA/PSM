@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ink-Grid | Distributed Benchmark Engine</title>
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #070709;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --neon-cyan: #00f3ff;
+            --neon-purple: #b026ff;
+            --neon-orange: #ffaa00;
+            --text-main: #f0f0f0;
+            --text-muted: #888;
+        }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.05), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(176, 38, 255, 0.05), transparent 25%);
+            font-family: 'Inter', sans-serif; color: var(--text-main);
+            height: 100vh; overflow: hidden; display: flex; flex-direction: column;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 40px; border-bottom: 1px solid var(--glass-border);
+        }
+
+        header h1 {
+            margin: 0; font-size: 22px; font-weight: 700;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        .container { display: flex; flex: 1; padding: 20px 40px; gap: 20px; overflow: hidden; }
+
+        .sidebar { width: 280px; display: flex; flex-direction: column; gap: 15px; }
+        .main-editor { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        
+        .nodes-container { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; }
+        
+        .node-orb {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: rgba(0, 243, 255, 0.1); border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold; transition: all 0.3s ease;
+        }
+        .node-orb.master { border-color: var(--neon-purple); box-shadow: 0 0 10px rgba(176, 38, 255, 0.3); }
+        .node-orb.computing { animation: pulse-orb 0.6s infinite alternate; }
+
+        @keyframes pulse-orb {
+            0% { transform: scale(0.95); box-shadow: 0 0 10px var(--neon-cyan); }
+            100% { transform: scale(1.15); box-shadow: 0 0 25px var(--neon-cyan), 0 0 50px var(--neon-cyan); }
+        }
+
+        .btn {
+            background: linear-gradient(90deg, rgba(0, 243, 255, 0.15), rgba(176, 38, 255, 0.15));
+            border: 1px solid var(--neon-cyan); color: white;
+            padding: 10px 18px; border-radius: 8px; cursor: pointer;
+            font-weight: bold; transition: 0.3s; font-size: 13px;
+        }
+        .btn:hover { box-shadow: 0 0 15px var(--neon-cyan); }
+        .btn.benchmark { border-color: var(--neon-orange); background: rgba(255, 170, 0, 0.15); }
+        .btn.benchmark:hover { box-shadow: 0 0 15px var(--neon-orange); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; filter: grayscale(1); }
+
+        .console {
+            height: 120px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 12px;
+            color: var(--neon-cyan); background: rgba(0,0,0,0.5);
+        }
+        .console-log { margin: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
+        .console-log.success { color: #00ff88; }
+        .console-log.error { color: #ff3366; }
+        .console-log.warn { color: var(--neon-orange); }
+
+        #qr-container img { border-radius: 8px; border: 2px solid white; margin: 10px auto; }
+
+        /* Canvas Render Area */
+        .render-container {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid var(--glass-border);
+            position: relative; overflow: hidden;
+        }
+        canvas {
+            border-radius: 4px; box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            image-rendering: pixelated; /* Efecto high-end pixel perfect */
+        }
+        .overlay-text { position: absolute; top: 10px; left: 10px; font-family: 'Fira Code', monospace; font-size: 12px; color: rgba(255,255,255,0.5); }
+
+        #node-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--bg-color); z-index: 100;
+            display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .big-orb {
+            width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--neon-cyan);
+            box-shadow: 0 0 50px rgba(0, 243, 255, 0.5);
+            margin-bottom: 30px; animation: pulse-orb 2s infinite alternate;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="master-header">
+        <h1>WolfInk | Ink-Grid</h1>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn benchmark" id="btn-benchmark" disabled>⚡ Iniciar Benchmark (PC vs Red)</button>
+        </div>
+    </header>
+
+    <div class="container" id="master-container">
+        <!-- Sidebar -->
+        <div class="sidebar glass-panel">
+            <h3 style="margin-top: 0;">Nodos de Cómputo</h3>
+            <p style="font-size: 11px; color: var(--text-muted);">Conecta tu móvil escaneando el QR para usar su CPU.</p>
+            
+            <div class="nodes-container" id="nodes-ui">
+                <div class="node-orb master" title="Master (This PC)">PC</div>
+            </div>
+
+            <div id="qr-wrapper" style="margin-top: auto; text-align: center;">
+                <div id="qr-container" style="display:inline-block; padding:10px; background:white; border-radius:10px;"></div>
+                <p style="font-size: 11px; margin-top:5px;">Conectar como Nodo Worker</p>
+            </div>
+        </div>
+
+        <!-- Render & Console -->
+        <div class="main-editor">
+            <div class="glass-panel render-container" style="padding: 0;">
+                <div class="overlay-text" id="render-status">Esperando ejecución...</div>
+                <canvas id="render-canvas" width="400" height="300"></canvas>
+            </div>
+
+            <div class="glass-panel console" id="console-output">
+                <div class="console-log">[Sistema] Inicializando Entorno Pyodide y WebRTC...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla Nodo (Móvil) -->
+    <div id="node-screen">
+        <h2 style="color: var(--neon-cyan); margin-bottom: 5px;">Ink-Grid Worker</h2>
+        <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 40px;">Procesando cálculos para la red local.</p>
+        <div class="big-orb" id="mobile-orb"></div>
+        <p id="node-status" style="font-family: 'Fira Code'; font-size: 14px;">Esperando tareas...</p>
+    </div>
+
+    <script>
+        /* ====================================================================
+           PYODIDE WORKER ENGINE (CON SOPORTE PARA ARRAYS MATEMÁTICOS)
+           ==================================================================== */
+        const workerCode = `
+            importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js");
+            let pyodideReady = false;
+            let pyodide;
+
+            async function initPyodide() {
+                pyodide = await loadPyodide();
+                pyodideReady = true;
+                postMessage({ type: 'ready' });
+            }
+            initPyodide();
+
+            onmessage = async (event) => {
+                const { type, code, payload, taskId } = event.data;
+                if (type === 'compute') {
+                    try {
+                        self.worker_payload = payload;
+                        await pyodide.runPythonAsync("import js\\npayload = js.worker_payload.to_py()");
+                        const result = await pyodide.runPythonAsync(code);
+                        
+                        // Si Python retorna un Proxy de Lista, lo convertimos a JS nativo
+                        let jsResult = result;
+                        if (result && typeof result.toJs === 'function') {
+                            jsResult = result.toJs();
+                        }
+                        
+                        postMessage({ type: 'result', taskId, result: jsResult, payload });
+                    } catch (error) {
+                        postMessage({ type: 'error', taskId, error: error.message });
+                    }
+                }
+            };
+        `;
+
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const pythonWorker = new Worker(URL.createObjectURL(blob));
+
+        /* ====================================================================
+           ALGORITMO PYTHON: RENDERIZADO FRACTAL (MANDELBROT)
+           Diseñado para estresar la CPU y ser fácilmente paralelizable.
+           ==================================================================== */
+        const fractalPythonCode = `
+def compute_fractal_chunk(w, h, start_y, end_y, max_iter):
+    res =[]
+    # Genera un pixel art calculando si las coordenadas escapan al infinito (Mandelbrot)
+    for y in range(start_y, end_y):
+        for x in range(w):
+            zx, zy = 0.0, 0.0
+            # Mapeo de coordenadas al plano complejo
+            cx = (x - w/1.5) * 3.0 / w
+            cy = (y - h/2.0) * 3.0 / w
+            i = 0
+            while zx*zx + zy*zy < 4.0 and i < max_iter:
+                tmp = zx*zx - zy*zy + cx
+                zy = 2.0*zx*zy + cy
+                zx = tmp
+                i += 1
+            res.append(i) # Devuelve la intensidad del pixel
+    return res
+
+# El payload lo inyecta la app JS (WebRTC)
+chunk = compute_fractal_chunk(payload['w'], payload['h'], payload['start_y'], payload['end_y'], payload['iters'])
+chunk
+`;
+
+        /* ====================================================================
+           LÓGICA PRINCIPAL Y CONTROL DISTRIBUIDO
+           ==================================================================== */
+        const consoleOut = document.getElementById('console-output');
+        const btnBenchmark = document.getElementById('btn-benchmark');
+        const nodesUI = document.getElementById('nodes-ui');
+        const canvas = document.getElementById('render-canvas');
+        const ctx = canvas.getContext('2d');
+        const renderStatus = document.getElementById('render-status');
+
+        let isMaster = true;
+        let peer = null;
+        let connections =[];
+        
+        // Variables Benchmark
+        const RENDER_W = 400;
+        const RENDER_H = 300;
+        const ITERS = 120; // Dificultad matemática
+        let benchmarkState = 'IDLE'; // IDLE, LOCAL, DISTRIBUTED
+        let activeTasks = 0;
+        let startTime = 0;
+        let timeLocal = 0;
+
+        function log(msg, type = '') {
+            const div = document.createElement('div');
+            div.className = `console-log ${type}`;
+            div.textContent = `> ${msg}`;
+            consoleOut.appendChild(div);
+            consoleOut.scrollTop = consoleOut.scrollHeight;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const masterId = urlParams.get('node');
+
+        if (masterId) {
+            isMaster = false;
+            document.getElementById('master-header').style.display = 'none';
+            document.getElementById('master-container').style.display = 'none';
+            document.getElementById('node-screen').style.display = 'flex';
+            initNode(masterId);
+        } else {
+            initMaster();
+        }
+
+        // Receptor de mensajes del Worker (Motor Python propio)
+        pythonWorker.onmessage = function(e) {
+            const data = e.data;
+            if (data.type === 'ready') {
+                if (isMaster) {
+                    log('Motor Python cargado en RAM local.', 'success');
+                    btnBenchmark.disabled = false;
+                }
+            } else if (data.type === 'result') {
+                if (isMaster) {
+                    handleWorkerResult(data.result, data.payload, 'Master (PC)');
+                } else {
+                    // Nodo: Enviar resultado renderizado devuelta al PC
+                    document.getElementById('mobile-orb').style.animation = 'pulse-orb 2s infinite alternate';
+                    document.getElementById('node-status').textContent = 'Esperando tareas...';
+                    if (peer && peer.connections[masterId]) {
+                        peer.connections[masterId][0].send({ 
+                            type: 'result', result: data.result, payload: data.payload 
+                        });
+                    }
+                }
+            }
+        };
+
+        /* --- LÓGICA DEL MASTER (PC) --- */
+        function initMaster() {
+            peer = new Peer();
+            peer.on('open', (id) => {
+                const connectUrl = window.location.href.split('?')[0] + '?node=' + id;
+                new QRCode(document.getElementById("qr-container"), {
+                    text: connectUrl, width: 100, height: 100
+                });
+            });
+
+            peer.on('connection', (conn) => {
+                log(`Nodo detectado: ${conn.peer.substring(0,6)}`, 'success');
+                connections.push(conn);
+                
+                const orb = document.createElement('div');
+                orb.className = 'node-orb';
+                orb.id = `orb-${conn.peer}`;
+                orb.textContent = `N${connections.length}`;
+                nodesUI.appendChild(orb);
+
+                conn.on('data', (data) => {
+                    if (data.type === 'result') {
+                        document.getElementById(`orb-${conn.peer}`).classList.remove('computing');
+                        handleWorkerResult(data.result, data.payload, `Nodo ${conn.peer.substring(0,4)}`);
+                    }
+                });
+
+                conn.on('close', () => {
+                    document.getElementById(`orb-${conn.peer}`).remove();
+                    connections = connections.filter(c => c.peer !== conn.peer);
+                });
+            });
+
+            btnBenchmark.addEventListener('click', startBenchmarkSequence);
+        }
+
+        // MOTOR DE RENDERIZADO VISUAL
+        function drawFractalChunk(pixels, w, h, start_y) {
+            const chunkH = pixels.length / w;
+            const imgData = ctx.createImageData(w, chunkH);
+            for (let i = 0; i < pixels.length; i++) {
+                const val = pixels[i];
+                // Coloreado Estilo "Ink" / Cyberpunk basado en iteraciones
+                let r = 0, g = 0, b = 0;
+                if (val < ITERS) {
+                    const intensity = (val / ITERS);
+                    r = Math.floor(intensity * 176); // Púrpura/Cian
+                    g = Math.floor(intensity * 38);
+                    b = Math.floor(intensity * 255);
+                    if(val % 2 === 0) g = Math.floor(intensity * 243); // Brillos Cian
+                }
+                const idx = i * 4;
+                imgData.data[idx] = r; imgData.data[idx+1] = g;
+                imgData.data[idx+2] = b; imgData.data[idx+3] = 255; // Alpha
+            }
+            ctx.putImageData(imgData, 0, start_y);
+        }
+
+        // SECUENCIA DE BENCHMARK (LA DEMOSTRACIÓN)
+        function startBenchmarkSequence() {
+            if (connections.length === 0) {
+                log("¡Atención! Conecta al menos 1 dispositivo móvil escaneando el QR para poder comparar.", "warn");
+                return;
+            }
+            btnBenchmark.disabled = true;
+            ctx.clearRect(0, 0, RENDER_W, RENDER_H);
+            
+            // FASE 1: Solo PC
+            benchmarkState = 'LOCAL';
+            log("--- INICIANDO BENCHMARK ---", "warn");
+            log(`FASE 1: Renderizado Fractal (Solo PC Local)`);
+            renderStatus.textContent = "Renderizando (100% Carga en PC Local)...";
+            document.querySelector('.node-orb.master').classList.add('computing');
+            
+            activeTasks = 1;
+            startTime = performance.now();
+            
+            pythonWorker.postMessage({
+                type: 'compute', code: fractalPythonCode,
+                payload: { w: RENDER_W, h: RENDER_H, start_y: 0, end_y: RENDER_H, iters: ITERS },
+                taskId: 'master'
+            });
+        }
+
+        function startDistributedPhase() {
+            ctx.clearRect(0, 0, RENDER_W, RENDER_H);
+            benchmarkState = 'DISTRIBUTED';
+            const totalNodes = connections.length + 1;
+            log(`FASE 2: Renderizado Distribuido (PC + ${connections.length} Nodos WebRTC)`);
+            renderStatus.textContent = `Renderizando (Carga dividida entre ${totalNodes} dispositivos)...`;
+            
+            activeTasks = totalNodes;
+            const rowsPerNode = Math.floor(RENDER_H / totalNodes);
+            startTime = performance.now();
+
+            // 1. Asignar Tarea al PC (Chunk Superior)
+            document.querySelector('.node-orb.master').classList.add('computing');
+            pythonWorker.postMessage({
+                type: 'compute', code: fractalPythonCode,
+                payload: { w: RENDER_W, h: RENDER_H, start_y: 0, end_y: rowsPerNode, iters: ITERS },
+                taskId: 'master'
+            });
+
+            // 2. Disparar tareas a los móviles instantáneamente (Chunks Restantes)
+            connections.forEach((conn, index) => {
+                document.getElementById(`orb-${conn.peer}`).classList.add('computing');
+                const startY = rowsPerNode * (index + 1);
+                const endY = (index === connections.length - 1) ? RENDER_H : startY + rowsPerNode; // El último asume el resto
+                
+                conn.send({
+                    type: 'compute', code: fractalPythonCode,
+                    payload: { w: RENDER_W, h: RENDER_H, start_y: startY, end_y: endY, iters: ITERS },
+                    taskId: conn.peer
+                });
+            });
+        }
+
+        function handleWorkerResult(pixels, payload, source) {
+            drawFractalChunk(pixels, payload.w, payload.h, payload.start_y);
+            activeTasks--;
+
+            if (benchmarkState === 'LOCAL' && activeTasks === 0) {
+                document.querySelector('.node-orb.master').classList.remove('computing');
+                timeLocal = (performance.now() - startTime) / 1000;
+                log(`[PC Solo] Tiempo de renderizado: ${timeLocal.toFixed(2)} segundos.`, 'success');
+                
+                setTimeout(startDistributedPhase, 2000); // Pausa dramática de 2s para ver el render
+            } 
+            else if (benchmarkState === 'DISTRIBUTED' && activeTasks === 0) {
+                document.querySelector('.node-orb.master').classList.remove('computing');
+                const timeDist = (performance.now() - startTime) / 1000;
+                const boost = (timeLocal / timeDist).toFixed(2);
+                
+                renderStatus.textContent = "Benchmark Finalizado.";
+                log(`[Ink-Grid Distribuido] Tiempo de renderizado: ${timeDist.toFixed(2)} segundos.`, 'success');
+                log(`🚀 RENDIMIENTO MULTIPLICADO: ${boost}x más rápido conectando tus dispositivos locales.`, 'warn');
+                
+                btnBenchmark.disabled = false;
+                benchmarkState = 'IDLE';
+            }
+        }
+
+        /* --- LÓGICA DEL NODO (MÓVIL) --- */
+        function initNode(masterPeerId) {
+            peer = new Peer();
+            peer.on('open', (id) => {
+                document.getElementById('node-status').textContent = 'Sincronizando WASM...';
+                const conn = peer.connect(masterPeerId);
+                
+                conn.on('open', () => {
+                    document.getElementById('node-status').textContent = 'Conectado al Master. En Espera.';
+                    conn.on('data', (data) => {
+                        if (data.type === 'compute') {
+                            document.getElementById('node-status').textContent = `Renderizando Líneas ${data.payload.start_y} a ${data.payload.end_y}...`;
+                            document.getElementById('mobile-orb').style.animation = 'pulse-orb 0.2s infinite alternate';
+                            pythonWorker.postMessage(data);
+                        }
+                    });
+                });
+            });
+        }
+    </script>
+</body>
+</html>
