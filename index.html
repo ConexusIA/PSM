@@ -3,37 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ink-Grid | Distributed Benchmark Engine</title>
-    <!-- PeerJS -->
+    <title>Ink-Grid | Hardcore Dynamic Benchmark</title>
     <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
-    <!-- QRCode.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=Fira+Code:wght@400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #070709;
-            --glass-bg: rgba(255, 255, 255, 0.03);
+            --bg-color: #070709; --glass-bg: rgba(255, 255, 255, 0.03);
             --glass-border: rgba(255, 255, 255, 0.08);
-            --neon-cyan: #00f3ff;
-            --neon-purple: #b026ff;
-            --neon-orange: #ffaa00;
-            --text-main: #f0f0f0;
-            --text-muted: #888;
+            --neon-cyan: #00f3ff; --neon-purple: #b026ff; --neon-orange: #ff3366;
+            --text-main: #f0f0f0; --text-muted: #888;
         }
 
         body {
-            margin: 0; padding: 0; background-color: var(--bg-color);
-            background-image: radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.05), transparent 25%),
-                              radial-gradient(circle at 85% 30%, rgba(176, 38, 255, 0.05), transparent 25%);
-            font-family: 'Inter', sans-serif; color: var(--text-main);
-            height: 100vh; overflow: hidden; display: flex; flex-direction: column;
+            margin: 0; background-color: var(--bg-color); font-family: 'Inter', sans-serif;
+            color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column;
         }
 
         .glass-panel {
-            background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px;
+            background: var(--glass-bg); backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
 
@@ -43,221 +33,193 @@
         }
 
         header h1 {
-            margin: 0; font-size: 22px; font-weight: 700;
-            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
+            margin: 0; font-size: 22px; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
 
         .container { display: flex; flex: 1; padding: 20px 40px; gap: 20px; overflow: hidden; }
-
         .sidebar { width: 280px; display: flex; flex-direction: column; gap: 15px; }
         .main-editor { flex: 1; display: flex; flex-direction: column; gap: 15px; }
         
-        .nodes-container { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 10px; }
+        .nodes-container { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
         
         .node-orb {
-            width: 40px; height: 40px; border-radius: 50%;
+            width: 45px; height: 45px; border-radius: 50%;
             background: rgba(0, 243, 255, 0.1); border: 2px solid var(--neon-cyan);
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: bold; transition: all 0.3s ease;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold; transition: 0.2s;
         }
-        .node-orb.master { border-color: var(--neon-purple); box-shadow: 0 0 10px rgba(176, 38, 255, 0.3); }
-        .node-orb.computing { animation: pulse-orb 0.6s infinite alternate; }
+        .node-orb span { font-size: 14px; }
+        .node-orb.master { border-color: var(--neon-purple); }
+        .node-orb.computing { animation: pulse 0.5s infinite alternate; }
 
-        @keyframes pulse-orb {
-            0% { transform: scale(0.95); box-shadow: 0 0 10px var(--neon-cyan); }
-            100% { transform: scale(1.15); box-shadow: 0 0 25px var(--neon-cyan), 0 0 50px var(--neon-cyan); }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 10px currentColor; }
+            100% { transform: scale(1.1); box-shadow: 0 0 25px currentColor; }
         }
 
         .btn {
-            background: linear-gradient(90deg, rgba(0, 243, 255, 0.15), rgba(176, 38, 255, 0.15));
-            border: 1px solid var(--neon-cyan); color: white;
-            padding: 10px 18px; border-radius: 8px; cursor: pointer;
-            font-weight: bold; transition: 0.3s; font-size: 13px;
+            background: rgba(255, 51, 102, 0.1); border: 1px solid var(--neon-orange); color: white;
+            padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s;
         }
-        .btn:hover { box-shadow: 0 0 15px var(--neon-cyan); }
-        .btn.benchmark { border-color: var(--neon-orange); background: rgba(255, 170, 0, 0.15); }
-        .btn.benchmark:hover { box-shadow: 0 0 15px var(--neon-orange); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; filter: grayscale(1); }
+        .btn:hover:not(:disabled) { box-shadow: 0 0 20px var(--neon-orange); background: rgba(255, 51, 102, 0.3); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; border-color: gray; }
 
         .console {
-            height: 120px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 12px;
-            color: var(--neon-cyan); background: rgba(0,0,0,0.5);
+            height: 160px; overflow-y: auto; font-family: 'Fira Code', monospace; font-size: 12px;
+            color: #a9b7c6; background: rgba(0,0,0,0.6); line-height: 1.4;
         }
-        .console-log { margin: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 2px; }
-        .console-log.success { color: #00ff88; }
-        .console-log.error { color: #ff3366; }
-        .console-log.warn { color: var(--neon-orange); }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; }
+        .log-sys { color: var(--neon-cyan); }
+        .log-warn { color: #ffaa00; font-weight: bold;}
+        .log-success { color: #00ff88; font-weight: bold;}
 
-        #qr-container img { border-radius: 8px; border: 2px solid white; margin: 10px auto; }
-
-        /* Canvas Render Area */
+        /* Canvas estricto */
         .render-container {
             flex: 1; display: flex; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid var(--glass-border);
-            position: relative; overflow: hidden;
+            background: #000; border: 1px solid var(--glass-border); position: relative;
         }
-        canvas {
-            border-radius: 4px; box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            image-rendering: pixelated; /* Efecto high-end pixel perfect */
+        canvas { box-shadow: 0 0 40px rgba(0,0,0,0.8); }
+        .progress-bar {
+            position: absolute; bottom: 0; left: 0; height: 4px; background: var(--neon-cyan); width: 0%; transition: 0.3s;
         }
-        .overlay-text { position: absolute; top: 10px; left: 10px; font-family: 'Fira Code', monospace; font-size: 12px; color: rgba(255,255,255,0.5); }
 
         #node-screen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: var(--bg-color); z-index: 100;
-            display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+            background: var(--bg-color); z-index: 100; display: none; flex-direction: column; 
+            justify-content: center; align-items: center; text-align: center;
         }
         .big-orb {
-            width: 120px; height: 120px; border-radius: 50%; border: 4px solid var(--neon-cyan);
-            box-shadow: 0 0 50px rgba(0, 243, 255, 0.5);
-            margin-bottom: 30px; animation: pulse-orb 2s infinite alternate;
+            width: 150px; height: 150px; border-radius: 50%; border: 4px solid var(--neon-cyan);
+            margin-bottom: 30px; animation: pulse 1s infinite alternate;
         }
     </style>
 </head>
 <body>
 
     <header id="master-header">
-        <h1>WolfInk | Ink-Grid</h1>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn benchmark" id="btn-benchmark" disabled>⚡ Iniciar Benchmark (PC vs Red)</button>
-        </div>
+        <h1>WolfInk | High-End Grid</h1>
+        <button class="btn" id="btn-benchmark" disabled>🔥 Iniciar Benchmark Hardcore</button>
     </header>
 
     <div class="container" id="master-container">
         <!-- Sidebar -->
         <div class="sidebar glass-panel">
-            <h3 style="margin-top: 0;">Nodos de Cómputo</h3>
-            <p style="font-size: 11px; color: var(--text-muted);">Conecta tu móvil escaneando el QR para usar su CPU.</p>
+            <h3 style="margin: 0;">Clúster Local</h3>
+            <p style="font-size: 11px; color: var(--text-muted);">Mide la potencia distribuida con Balanceo de Carga Dinámico.</p>
             
             <div class="nodes-container" id="nodes-ui">
-                <div class="node-orb master" title="Master (This PC)">PC</div>
+                <div class="node-orb master" id="orb-master"><span>PC</span><div id="stat-master">0 Tareas</div></div>
             </div>
 
-            <div id="qr-wrapper" style="margin-top: auto; text-align: center;">
-                <div id="qr-container" style="display:inline-block; padding:10px; background:white; border-radius:10px;"></div>
-                <p style="font-size: 11px; margin-top:5px;">Conectar como Nodo Worker</p>
+            <div style="margin-top: auto; text-align: center;">
+                <div id="qr-container" style="display:inline-block; padding:10px; background:white; border-radius:8px;"></div>
+                <p style="font-size: 11px; color: var(--neon-cyan);">Escanea para unirse al Clúster</p>
+                <p style="font-size: 10px; color: gray;">(Mantén la pantalla del móvil encendida)</p>
             </div>
         </div>
 
         <!-- Render & Console -->
         <div class="main-editor">
             <div class="glass-panel render-container" style="padding: 0;">
-                <div class="overlay-text" id="render-status">Esperando ejecución...</div>
-                <canvas id="render-canvas" width="400" height="300"></canvas>
+                <canvas id="render-canvas" width="600" height="400"></canvas>
+                <div class="progress-bar" id="progress"></div>
             </div>
 
             <div class="glass-panel console" id="console-output">
-                <div class="console-log">[Sistema] Inicializando Entorno Pyodide y WebRTC...</div>
+                <div class="log-entry log-sys">[Sistema] Motor WASM y WebRTC Inicializando...</div>
             </div>
         </div>
     </div>
 
-    <!-- Pantalla Nodo (Móvil) -->
+    <!-- Pantalla Móvil -->
     <div id="node-screen">
-        <h2 style="color: var(--neon-cyan); margin-bottom: 5px;">Ink-Grid Worker</h2>
-        <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 40px;">Procesando cálculos para la red local.</p>
+        <h2 style="color: var(--neon-cyan);">Ink-Grid Node</h2>
+        <p style="color: var(--text-muted); font-size: 13px; max-width: 80%;">Procesador anclado a la red de supercomputación local. Mantén esta pestaña abierta.</p>
         <div class="big-orb" id="mobile-orb"></div>
-        <p id="node-status" style="font-family: 'Fira Code'; font-size: 14px;">Esperando tareas...</p>
+        <p id="node-status" style="font-family: 'Fira Code'; font-size: 14px;">Sincronizando...</p>
+        <p id="node-tasks" style="color: #ffaa00; font-weight: bold;">Tareas completadas: 0</p>
     </div>
 
     <script>
-        /* ====================================================================
-           PYODIDE WORKER ENGINE (CON SOPORTE PARA ARRAYS MATEMÁTICOS)
-           ==================================================================== */
+        // WEB WORKER DE PYTHON (Motor aislado)
         const workerCode = `
             importScripts("https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js");
-            let pyodideReady = false;
-            let pyodide;
+            let pyodideReady = false, pyodide;
 
-            async function initPyodide() {
+            async function init() {
                 pyodide = await loadPyodide();
-                pyodideReady = true;
                 postMessage({ type: 'ready' });
             }
-            initPyodide();
+            init();
 
             onmessage = async (event) => {
                 const { type, code, payload, taskId } = event.data;
                 if (type === 'compute') {
                     try {
-                        self.worker_payload = payload;
-                        await pyodide.runPythonAsync("import js\\npayload = js.worker_payload.to_py()");
+                        self.payload = payload;
+                        await pyodide.runPythonAsync("import js\\npayload = js.payload.to_py()");
                         const result = await pyodide.runPythonAsync(code);
-                        
-                        // Si Python retorna un Proxy de Lista, lo convertimos a JS nativo
-                        let jsResult = result;
-                        if (result && typeof result.toJs === 'function') {
-                            jsResult = result.toJs();
-                        }
-                        
+                        let jsResult = (result && typeof result.toJs === 'function') ? result.toJs() : result;
                         postMessage({ type: 'result', taskId, result: jsResult, payload });
-                    } catch (error) {
-                        postMessage({ type: 'error', taskId, error: error.message });
+                    } catch (err) {
+                        postMessage({ type: 'error', error: err.message });
                     }
                 }
             };
         `;
+        const pythonWorker = new Worker(URL.createObjectURL(new Blob([workerCode], { type: 'application/javascript' })));
 
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        const pythonWorker = new Worker(URL.createObjectURL(blob));
-
-        /* ====================================================================
-           ALGORITMO PYTHON: RENDERIZADO FRACTAL (MANDELBROT)
-           Diseñado para estresar la CPU y ser fácilmente paralelizable.
-           ==================================================================== */
-        const fractalPythonCode = `
-def compute_fractal_chunk(w, h, start_y, end_y, max_iter):
+        // ALGORITMO HARDCORE (10x Más difícil)
+        // Zoom profundo en el "Valle de los Caballitos de Mar" del Mandelbrot
+        const pyCode = `
+def compute_chunk(w, h, start_y, end_y, max_iter):
     res =[]
-    # Genera un pixel art calculando si las coordenadas escapan al infinito (Mandelbrot)
+    zoom = 300.0  # Zoom extremo
+    move_x = -0.743643887037151 # Coordenadas complejas densas
+    move_y = 0.131825904205330
+    
     for y in range(start_y, end_y):
         for x in range(w):
             zx, zy = 0.0, 0.0
-            # Mapeo de coordenadas al plano complejo
-            cx = (x - w/1.5) * 3.0 / w
-            cy = (y - h/2.0) * 3.0 / w
+            cx = (x - w/2) / zoom / w + move_x
+            cy = (y - h/2) / zoom / h + move_y
             i = 0
             while zx*zx + zy*zy < 4.0 and i < max_iter:
                 tmp = zx*zx - zy*zy + cx
                 zy = 2.0*zx*zy + cy
                 zx = tmp
                 i += 1
-            res.append(i) # Devuelve la intensidad del pixel
+            res.append(i)
     return res
 
-# El payload lo inyecta la app JS (WebRTC)
-chunk = compute_fractal_chunk(payload['w'], payload['h'], payload['start_y'], payload['end_y'], payload['iters'])
-chunk
+compute_chunk(payload['w'], payload['h'], payload['start_y'], payload['end_y'], payload['iters'])
 `;
 
-        /* ====================================================================
-           LÓGICA PRINCIPAL Y CONTROL DISTRIBUIDO
-           ==================================================================== */
-        const consoleOut = document.getElementById('console-output');
-        const btnBenchmark = document.getElementById('btn-benchmark');
-        const nodesUI = document.getElementById('nodes-ui');
-        const canvas = document.getElementById('render-canvas');
-        const ctx = canvas.getContext('2d');
-        const renderStatus = document.getElementById('render-status');
-
-        let isMaster = true;
-        let peer = null;
-        let connections =[];
+        // LÓGICA DE BALANCEO DE CARGA DINÁMICO (El "Juez Justo")
+        const RENDER_W = 600, RENDER_H = 400;
+        const ITERS = 800; // Multiplica x10 la carga de CPU respecto a la versión anterior
+        const CHUNK_ROWS = 10; // Bloques de 10 píxeles de alto
+        const TOTAL_TASKS = Math.ceil(RENDER_H / CHUNK_ROWS);
         
-        // Variables Benchmark
-        const RENDER_W = 400;
-        const RENDER_H = 300;
-        const ITERS = 120; // Dificultad matemática
-        let benchmarkState = 'IDLE'; // IDLE, LOCAL, DISTRIBUTED
-        let activeTasks = 0;
+        let taskQueue =[];
+        let completedTasks = 0;
+        let workerStats = {}; // Registra exactamente quién hizo cuánto
+        let benchmarkPhase = 0; // 1 = Local, 2 = Distribuido
         let startTime = 0;
         let timeLocal = 0;
 
-        function log(msg, type = '') {
+        const consoleOut = document.getElementById('console-output');
+        const btnBench = document.getElementById('btn-benchmark');
+        const ctx = document.getElementById('render-canvas').getContext('2d');
+        const progressBar = document.getElementById('progress');
+        
+        let isMaster = true, peer = null, connections =[];
+
+        function log(msg, type = 'log-sys') {
             const div = document.createElement('div');
-            div.className = `console-log ${type}`;
-            div.textContent = `> ${msg}`;
+            div.className = `log-entry ${type}`;
+            div.textContent = msg;
             consoleOut.appendChild(div);
             consoleOut.scrollTop = consoleOut.scrollHeight;
         }
@@ -267,193 +229,185 @@ chunk
 
         if (masterId) {
             isMaster = false;
-            document.getElementById('master-header').style.display = 'none';
             document.getElementById('master-container').style.display = 'none';
+            document.getElementById('master-header').style.display = 'none';
             document.getElementById('node-screen').style.display = 'flex';
             initNode(masterId);
         } else {
             initMaster();
         }
 
-        // Receptor de mensajes del Worker (Motor Python propio)
-        pythonWorker.onmessage = function(e) {
-            const data = e.data;
-            if (data.type === 'ready') {
-                if (isMaster) {
-                    log('Motor Python cargado en RAM local.', 'success');
-                    btnBenchmark.disabled = false;
-                }
-            } else if (data.type === 'result') {
-                if (isMaster) {
-                    handleWorkerResult(data.result, data.payload, 'Master (PC)');
-                } else {
-                    // Nodo: Enviar resultado renderizado devuelta al PC
-                    document.getElementById('mobile-orb').style.animation = 'pulse-orb 2s infinite alternate';
-                    document.getElementById('node-status').textContent = 'Esperando tareas...';
-                    if (peer && peer.connections[masterId]) {
-                        peer.connections[masterId][0].send({ 
-                            type: 'result', result: data.result, payload: data.payload 
-                        });
-                    }
+        // Receptor Web Worker Master
+        pythonWorker.onmessage = (e) => {
+            if (e.data.type === 'ready' && isMaster) {
+                log('Motor Python (10x Dificultad) Cargado.', 'log-sys');
+                btnBench.disabled = false;
+            } else if (e.data.type === 'result') {
+                if (isMaster) handleResult(e.data.result, e.data.payload, 'master');
+                else {
+                    let done = parseInt(document.getElementById('node-tasks').innerText.split(': ')[1]) + 1;
+                    document.getElementById('node-tasks').innerText = `Tareas completadas: ${done}`;
+                    peer.connections[masterId][0].send({ type: 'result', result: e.data.result, payload: e.data.payload });
                 }
             }
         };
 
-        /* --- LÓGICA DEL MASTER (PC) --- */
+        /* --- FASE MASTER --- */
         function initMaster() {
             peer = new Peer();
             peer.on('open', (id) => {
-                const connectUrl = window.location.href.split('?')[0] + '?node=' + id;
                 new QRCode(document.getElementById("qr-container"), {
-                    text: connectUrl, width: 100, height: 100
+                    text: window.location.href.split('?')[0] + '?node=' + id, width: 110, height: 110
                 });
             });
 
             peer.on('connection', (conn) => {
-                log(`Nodo detectado: ${conn.peer.substring(0,6)}`, 'success');
+                log(`Nodo Móvil Conectado: ${conn.peer.substring(0,5)}`, 'log-success');
                 connections.push(conn);
                 
                 const orb = document.createElement('div');
-                orb.className = 'node-orb';
-                orb.id = `orb-${conn.peer}`;
-                orb.textContent = `N${connections.length}`;
-                nodesUI.appendChild(orb);
+                orb.className = 'node-orb'; orb.id = `orb-${conn.peer}`;
+                orb.innerHTML = `<span>MÓVIL</span><div id="stat-${conn.peer}">0 Tareas</div>`;
+                document.getElementById('nodes-ui').appendChild(orb);
 
                 conn.on('data', (data) => {
-                    if (data.type === 'result') {
-                        document.getElementById(`orb-${conn.peer}`).classList.remove('computing');
-                        handleWorkerResult(data.result, data.payload, `Nodo ${conn.peer.substring(0,4)}`);
-                    }
-                });
-
-                conn.on('close', () => {
-                    document.getElementById(`orb-${conn.peer}`).remove();
-                    connections = connections.filter(c => c.peer !== conn.peer);
+                    if (data.type === 'result') handleResult(data.result, data.payload, conn.peer);
                 });
             });
 
-            btnBenchmark.addEventListener('click', startBenchmarkSequence);
+            btnBench.addEventListener('click', () => {
+                if(connections.length === 0) {
+                    log("CONECTA AL MENOS 1 MÓVIL (Escanea el QR) para hacer el Benchmark válido.", "log-warn");
+                    return;
+                }
+                startPhase1();
+            });
         }
 
-        // MOTOR DE RENDERIZADO VISUAL
-        function drawFractalChunk(pixels, w, h, start_y) {
-            const chunkH = pixels.length / w;
-            const imgData = ctx.createImageData(w, chunkH);
+        function buildQueue() {
+            taskQueue =[];
+            for (let y = 0; y < RENDER_H; y += CHUNK_ROWS) {
+                taskQueue.push({ start_y: y, end_y: Math.min(y + CHUNK_ROWS, RENDER_H) });
+            }
+            completedTasks = 0;
+            progressBar.style.width = '0%';
+        }
+
+        // DISPATCHER: Reparte tareas a quien esté libre
+        function dispatchTask(workerId) {
+            if (taskQueue.length === 0) return; // No hay más tareas
+
+            const task = taskQueue.shift();
+            const payload = { w: RENDER_W, h: RENDER_H, start_y: task.start_y, end_y: task.end_y, iters: ITERS };
+            
+            document.getElementById(`orb-${workerId}`).classList.add('computing');
+
+            if (workerId === 'master') {
+                pythonWorker.postMessage({ type: 'compute', code: pyCode, payload, taskId: workerId });
+            } else {
+                const conn = connections.find(c => c.peer === workerId);
+                if (conn) conn.send({ type: 'compute', code: pyCode, payload, taskId: workerId });
+            }
+        }
+
+        function handleResult(pixels, payload, workerId) {
+            workerStats[workerId] = (workerStats[workerId] || 0) + 1;
+            document.getElementById(`stat-${workerId}`).innerText = `${workerStats[workerId]} Tareas`;
+            document.getElementById(`orb-${workerId}`).classList.remove('computing');
+
+            // Dibujar bloque
+            const imgData = ctx.createImageData(RENDER_W, payload.end_y - payload.start_y);
             for (let i = 0; i < pixels.length; i++) {
                 const val = pixels[i];
-                // Coloreado Estilo "Ink" / Cyberpunk basado en iteraciones
-                let r = 0, g = 0, b = 0;
+                let r=0, g=0, b=0;
                 if (val < ITERS) {
-                    const intensity = (val / ITERS);
-                    r = Math.floor(intensity * 176); // Púrpura/Cian
-                    g = Math.floor(intensity * 38);
-                    b = Math.floor(intensity * 255);
-                    if(val % 2 === 0) g = Math.floor(intensity * 243); // Brillos Cian
+                    const heat = (val / ITERS) * 3; 
+                    r = Math.min(255, heat * 200); g = Math.min(255, heat * 50); b = Math.min(255, heat * 255);
                 }
                 const idx = i * 4;
-                imgData.data[idx] = r; imgData.data[idx+1] = g;
-                imgData.data[idx+2] = b; imgData.data[idx+3] = 255; // Alpha
+                imgData.data[idx]=r; imgData.data[idx+1]=g; imgData.data[idx+2]=b; imgData.data[idx+3]=255;
             }
-            ctx.putImageData(imgData, 0, start_y);
+            ctx.putImageData(imgData, 0, payload.start_y);
+
+            completedTasks++;
+            progressBar.style.width = `${(completedTasks / TOTAL_TASKS) * 100}%`;
+
+            // Si quedan tareas, enviar la siguiente al worker que acaba de terminar (Dinámico)
+            if (taskQueue.length > 0) {
+                dispatchTask(workerId);
+            } else if (completedTasks === TOTAL_TASKS) {
+                finishPhase();
+            }
         }
 
-        // SECUENCIA DE BENCHMARK (LA DEMOSTRACIÓN)
-        function startBenchmarkSequence() {
-            if (connections.length === 0) {
-                log("¡Atención! Conecta al menos 1 dispositivo móvil escaneando el QR para poder comparar.", "warn");
-                return;
-            }
-            btnBenchmark.disabled = true;
-            ctx.clearRect(0, 0, RENDER_W, RENDER_H);
+        function startPhase1() {
+            btnBench.disabled = true;
+            ctx.clearRect(0,0, RENDER_W, RENDER_H);
+            log("================================", "log-sys");
+            log("FASE 1: PC SOLA (CARGA PESADA)", "log-warn");
+            benchmarkPhase = 1; workerStats = { 'master': 0 };
+            document.getElementById('stat-master').innerText = '0 Tareas';
             
-            // FASE 1: Solo PC
-            benchmarkState = 'LOCAL';
-            log("--- INICIANDO BENCHMARK ---", "warn");
-            log(`FASE 1: Renderizado Fractal (Solo PC Local)`);
-            renderStatus.textContent = "Renderizando (100% Carga en PC Local)...";
-            document.querySelector('.node-orb.master').classList.add('computing');
-            
-            activeTasks = 1;
+            buildQueue();
             startTime = performance.now();
             
-            pythonWorker.postMessage({
-                type: 'compute', code: fractalPythonCode,
-                payload: { w: RENDER_W, h: RENDER_H, start_y: 0, end_y: RENDER_H, iters: ITERS },
-                taskId: 'master'
-            });
+            // Inyectar la primera tarea al PC (al terminar, pedirá la siguiente en bucle)
+            dispatchTask('master');
         }
 
-        function startDistributedPhase() {
-            ctx.clearRect(0, 0, RENDER_W, RENDER_H);
-            benchmarkState = 'DISTRIBUTED';
-            const totalNodes = connections.length + 1;
-            log(`FASE 2: Renderizado Distribuido (PC + ${connections.length} Nodos WebRTC)`);
-            renderStatus.textContent = `Renderizando (Carga dividida entre ${totalNodes} dispositivos)...`;
+        function startPhase2() {
+            ctx.clearRect(0,0, RENDER_W, RENDER_H);
+            log("================================", "log-sys");
+            log(`FASE 2: RED INK-GRID (${connections.length + 1} Nodos)`, "log-warn");
+            log(`Balanceo Dinámico Activado. Cero cuellos de botella.`, "log-sys");
+            benchmarkPhase = 2; workerStats = { 'master': 0 };
+            connections.forEach(c => workerStats[c.peer] = 0);
             
-            activeTasks = totalNodes;
-            const rowsPerNode = Math.floor(RENDER_H / totalNodes);
+            document.getElementById('stat-master').innerText = '0 Tareas';
+            connections.forEach(c => document.getElementById(`stat-${c.peer}`).innerText = '0 Tareas');
+
+            buildQueue();
             startTime = performance.now();
 
-            // 1. Asignar Tarea al PC (Chunk Superior)
-            document.querySelector('.node-orb.master').classList.add('computing');
-            pythonWorker.postMessage({
-                type: 'compute', code: fractalPythonCode,
-                payload: { w: RENDER_W, h: RENDER_H, start_y: 0, end_y: rowsPerNode, iters: ITERS },
-                taskId: 'master'
-            });
-
-            // 2. Disparar tareas a los móviles instantáneamente (Chunks Restantes)
-            connections.forEach((conn, index) => {
-                document.getElementById(`orb-${conn.peer}`).classList.add('computing');
-                const startY = rowsPerNode * (index + 1);
-                const endY = (index === connections.length - 1) ? RENDER_H : startY + rowsPerNode; // El último asume el resto
-                
-                conn.send({
-                    type: 'compute', code: fractalPythonCode,
-                    payload: { w: RENDER_W, h: RENDER_H, start_y: startY, end_y: endY, iters: ITERS },
-                    taskId: conn.peer
-                });
-            });
+            // Disparar la primera ráfaga de tareas a TODOS los dispositivos
+            dispatchTask('master');
+            connections.forEach(c => dispatchTask(c.peer));
         }
 
-        function handleWorkerResult(pixels, payload, source) {
-            drawFractalChunk(pixels, payload.w, payload.h, payload.start_y);
-            activeTasks--;
-
-            if (benchmarkState === 'LOCAL' && activeTasks === 0) {
-                document.querySelector('.node-orb.master').classList.remove('computing');
-                timeLocal = (performance.now() - startTime) / 1000;
-                log(`[PC Solo] Tiempo de renderizado: ${timeLocal.toFixed(2)} segundos.`, 'success');
-                
-                setTimeout(startDistributedPhase, 2000); // Pausa dramática de 2s para ver el render
+        function finishPhase() {
+            const timeTaken = ((performance.now() - startTime) / 1000).toFixed(2);
+            
+            if (benchmarkPhase === 1) {
+                timeLocal = timeTaken;
+                log(`[Fase 1 Finalizada] Tiempo PC Solo: ${timeLocal}s`, "log-success");
+                setTimeout(startPhase2, 2500); // Pausa dramática
             } 
-            else if (benchmarkState === 'DISTRIBUTED' && activeTasks === 0) {
-                document.querySelector('.node-orb.master').classList.remove('computing');
-                const timeDist = (performance.now() - startTime) / 1000;
-                const boost = (timeLocal / timeDist).toFixed(2);
+            else if (benchmarkPhase === 2) {
+                const boost = (timeLocal / timeTaken).toFixed(2);
+                log(`[Fase 2 Finalizada] Tiempo Distribuido: ${timeTaken}s`, "log-success");
+                log(`🔥 RENDIMIENTO MEJORADO: ${boost}x más rápido.`, "log-warn");
                 
-                renderStatus.textContent = "Benchmark Finalizado.";
-                log(`[Ink-Grid Distribuido] Tiempo de renderizado: ${timeDist.toFixed(2)} segundos.`, 'success');
-                log(`🚀 RENDIMIENTO MULTIPLICADO: ${boost}x más rápido conectando tus dispositivos locales.`, 'warn');
+                // Mostrar la estadística que demuestra que NO hay truco
+                let statsText = "Balanceo Real: PC procesó " + workerStats['master'] + " bloques. ";
+                connections.forEach((c, idx) => {
+                    statsText += `Móvil ${idx+1} procesó ${workerStats[c.peer]} bloques.`;
+                });
+                log(statsText, "log-sys");
                 
-                btnBenchmark.disabled = false;
-                benchmarkState = 'IDLE';
+                btnBench.disabled = false;
             }
         }
 
-        /* --- LÓGICA DEL NODO (MÓVIL) --- */
+        /* --- FASE NODO (MÓVIL) --- */
         function initNode(masterPeerId) {
             peer = new Peer();
             peer.on('open', (id) => {
-                document.getElementById('node-status').textContent = 'Sincronizando WASM...';
                 const conn = peer.connect(masterPeerId);
-                
                 conn.on('open', () => {
-                    document.getElementById('node-status').textContent = 'Conectado al Master. En Espera.';
+                    document.getElementById('node-status').textContent = 'Esperando fragmentos de código...';
                     conn.on('data', (data) => {
                         if (data.type === 'compute') {
-                            document.getElementById('node-status').textContent = `Renderizando Líneas ${data.payload.start_y} a ${data.payload.end_y}...`;
-                            document.getElementById('mobile-orb').style.animation = 'pulse-orb 0.2s infinite alternate';
+                            document.getElementById('node-status').textContent = `Calculando líneas ${data.payload.start_y} a ${data.payload.end_y}...`;
                             pythonWorker.postMessage(data);
                         }
                     });
